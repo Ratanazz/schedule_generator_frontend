@@ -24,7 +24,7 @@ const SubjectForm = () => {
       if (!isEditing) return;
       
       try {
-        const response = await axios.get(`/api/subjects/${id}`);
+        const response = await axios.get(`/subjects/${id}`);
         setFormData(response.data);
       } catch (err) {
         setError('Failed to fetch subject data');
@@ -80,11 +80,11 @@ const SubjectForm = () => {
     try {
       if (isEditing) {
         // Update existing subject
-        await axios.put(`/api/subjects/${id}`, formData);
+        await axios.put(`/subjects/${id}`, formData);
         setSuccess('Subject updated successfully!');
       } else {
         // Create new subject
-        await axios.post('/api/subjects', formData);
+        await axios.post('/subjects', formData);
         setSuccess('Subject created successfully!');
         
         // Reset form for a new entry

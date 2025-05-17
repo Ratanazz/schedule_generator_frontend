@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import './TeacherForm.css'; // Import the CSS file
 
 const TeacherForm = () => {
+  
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditMode = !!id;
-  
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -15,11 +17,11 @@ const TeacherForm = () => {
     max_hours: 40,
     subject_ids: []
   });
-  
+
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
@@ -29,14 +31,14 @@ const TeacherForm = () => {
         setError('Failed to fetch subjects');
       }
     };
-    
+
     const fetchTeacher = async () => {
       if (isEditMode) {
         try {
           setLoading(true);
           const response = await axios.get(`/api/teachers/${id}`);
           const teacherData = response.data;
-          
+
           setFormData({
             name: teacherData.name,
             email: teacherData.email,
@@ -52,11 +54,11 @@ const TeacherForm = () => {
         }
       }
     };
-    
+
     fetchSubjects();
     fetchTeacher();
   }, [id, isEditMode]);
-  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -64,35 +66,35 @@ const TeacherForm = () => {
       [name]: value
     });
   };
-  
+
   const handleSubjectChange = (e) => {
     const subjectId = parseInt(e.target.value);
     let newSubjectIds;
-    
+
     if (e.target.checked) {
       newSubjectIds = [...formData.subject_ids, subjectId];
     } else {
       newSubjectIds = formData.subject_ids.filter(id => id !== subjectId);
     }
-    
+
     setFormData({
       ...formData,
       subject_ids: newSubjectIds
     });
   };
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
-      
+
       if (isEditMode) {
         await axios.put(`/api/teachers/${id}`, formData);
       } else {
         await axios.post('/api/teachers', formData);
       }
-      
+
       setLoading(false);
       navigate('/teachers');
     } catch (err) {
@@ -100,104 +102,126 @@ const TeacherForm = () => {
       setLoading(false);
     }
   };
-  
-  if (loading) return <div>Loading...</div>;
-  
+
+  if (loading) return <div aria-live="polite">Loading...</div>;
+
   return (
     <div className="teacher-form">
       <h1>{isEditMode ? 'Edit Teacher' : 'Add Teacher'}</h1>
-      
-      {error && <div className="error">{error}</div>}
-      
-      <form onSubmit={handleSubmit}>
+
+      {error && (
+        <div className="error" role="alert">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} aria-label={isEditMode ? 'Edit teacher form' : 'Add teacher form'}>
         <div className="form-group">
-          <label>Name</label>
-          <input 
+          <label htmlFor="name">Name</label>
+          <input
             type="text"
+            id="name"
             name="name"
             value={formData.name}
             onChange={handleChange}
             required
+            aria-required="true"
           />
         </div>
-        
+
         <div className="form-group">
-          <label>Email</label>
-          <input 
+          <label htmlFor="email">Email</label>
+          <input
             type="email"
+            id="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
             required
+            aria-required="true"
           />
         </div>
-        
+
         <div className="form-group">
-          <label>Phone</label>
-          <input 
+          <label htmlFor="phone">Phone</label>
+          <input
             type="text"
+            id="phone"
             name="phone"
             value={formData.phone}
             onChange={handleChange}
             required
+            aria-required="true"
           />
         </div>
-        
+
         <div className="form-group">
-          <label>Shift</label>
-          <select 
+          <label htmlFor="shift">Shift</label>
+          <select
+            id="shift"
             name="shift"
             value={formData.shift}
             onChange={handleChange}
             required
+            aria-required="true"
           >
             <option value="AM">AM</option>
             <option value="PM">PM</option>
             <option value="BOTH">BOTH</option>
           </select>
         </div>
-        
+
         <div className="form-group">
-          <label>Maximum Hours per Week</label>
-          <input 
+          <label htmlFor="max_hours">Maximum Hours per Week</label>
+          <input
             type="number"
+            id="max_hours"
             name="max_hours"
             value={formData.max_hours}
             onChange={handleChange}
             min="1"
             required
+            aria-required="true"
           />
         </div>
-        
+
         <div className="form-group">
-          <label>Subjects</label>
-          <div className="checkbox-group">
-            {subjects.map(subject => (
-              <div key={subject.id} className="checkbox-item">
-                <input 
-                  type="checkbox"
-                  id={`subject-${subject.id}`}
-                  value={subject.id}
-                  checked={formData.subject_ids.includes(subject.id)}
-                  onChange={handleSubjectChange}
-                />
-                <label htmlFor={`subject-${subject.id}`}>
-                  {subject.name}
-                </label>
-              </div>
-            ))}
-          </div>
+          <fieldset>
+            <legend>Subjects</legend>
+            <div className="checkbox-group">
+              {subjects.map(subject => (
+                <div key={subject.id} className="checkbox-item">
+                  <input
+                    type="checkbox"
+                    id={`subject-${subject.id}`}
+                    value={subject.id}
+                    checked={formData.subject_ids.includes(subject.id)}
+                    onChange={handleSubjectChange}
+                    aria-labelledby={`subject-label-${subject.id}`}
+                  />
+                  <label id={`subject-label-${subject.id}`} htmlFor={`subject-${subject.id}`}>
+                    {subject.name}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </fieldset>
         </div>
-        
+
         <div className="form-actions">
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="btn-secondary"
             onClick={() => navigate('/teachers')}
+            aria-label="Cancel and return to teachers list"
           >
             Cancel
           </button>
-          <button type="submit" className="btn-primary">
+          <button
+            type="submit"
+            className="btn-primary"
+            aria-label={isEditMode ? 'Update teacher information' : 'Save new teacher'}
+          >
             {isEditMode ? 'Update' : 'Save'}
           </button>
         </div>
