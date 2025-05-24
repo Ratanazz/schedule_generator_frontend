@@ -58,6 +58,12 @@ const Sidebar = () => {
             Grades
           </Link>
           <Link
+            to="/classes"
+            className="block px-4 py-2 text-base font-medium rounded-lg hover:bg-gray-700 hover:text-blue-300 transition-colors"
+          >
+            Class
+          </Link>
+          <Link
             to="/schedules"
             className="block px-4 py-2 text-base font-medium rounded-lg hover:bg-gray-700 hover:text-blue-300 transition-colors"
           >

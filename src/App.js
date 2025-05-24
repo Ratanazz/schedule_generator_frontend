@@ -7,6 +7,8 @@ import TeacherList from './pages/teachers/TeacherList';
 import TeacherForm from './pages/teachers/TeacherForm';
 import SubjectList from './pages/subjects/SubjectList';
 import SubjectForm from './pages/subjects/SubjectForm';
+import GradeclassList from './pages/gradeclass/GradeclassList';
+import GradeclassForm from './pages/gradeclass/GradeclassForm';
 import GradeList from './pages/grades/GradeList';
 import GradeForm from './pages/grades/GradeForm';
 import ScheduleList from './pages/schedules/ScheduleList';
@@ -120,6 +122,31 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <GradeForm />
+                  </ProtectedRoute>
+                }
+              />
+              {/* GradeClass Routes */}
+              <Route
+                path="/classes"
+                element={
+                  <ProtectedRoute>
+                    <GradeclassList />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/classes/create"
+                element={
+                  <ProtectedRoute>
+                    <GradeclassForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/classes/edit/:id"
+                element={
+                  <ProtectedRoute>
+                    <GradeclassForm />
                   </ProtectedRoute>
                 }
               />
