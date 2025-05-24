@@ -29,7 +29,7 @@ const GradeForm = () => {
       if (!isEditing) return;
       
       try {
-        const response = await axios.get(`/api/grades/${id}`);
+        const response = await axios.get(`/grades/${id}`);
         setFormData(response.data);
       } catch (err) {
         setError('Failed to fetch grade data');
@@ -85,11 +85,11 @@ const GradeForm = () => {
     try {
       if (isEditing) {
         // Update existing grade
-        await axios.put(`/api/grades/${id}`, formData);
+        await axios.put(`/grades/${id}`, formData);
         setSuccess('Grade updated successfully!');
       } else {
         // Create new grade
-        await axios.post('/api/grades', formData);
+        await axios.post('/grades', formData);
         setSuccess('Grade created successfully!');
         
         // Reset form for a new entry

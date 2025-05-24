@@ -16,7 +16,7 @@ const SubjectList = () => {
   const fetchSubjects = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/subjects');
+      const response = await axios.get('/subjects');
       setSubjects(response.data);
       setError('');
     } catch (err) {
@@ -36,7 +36,7 @@ const SubjectList = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/api/subjects/${id}`);
+      await axios.delete(`/subjects/${id}`);
       setSubjects(subjects.filter(subject => subject.id !== id));
       setDeleteConfirm(null);
     } catch (err) {

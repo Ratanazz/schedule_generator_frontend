@@ -14,7 +14,7 @@ const ScheduleList = () => {
     const fetchSchedules = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`/api/schedules?grade=${currentGrade}`);
+        const response = await axios.get(`/schedules?grade=${currentGrade}`);
         setSchedules(response.data);
         setLoading(false);
       } catch (err) {
@@ -29,7 +29,7 @@ const ScheduleList = () => {
   const handleDeleteSchedule = async (id) => {
     if (window.confirm('Are you sure you want to delete this schedule?')) {
       try {
-        await axios.delete(`/api/schedules/${id}`);
+        await axios.delete(`/schedules/${id}`);
         setSchedules(schedules.filter(schedule => schedule.id !== id));
       } catch (err) {
         setError('Failed to delete schedule. Please try again later.');

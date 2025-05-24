@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 
 axios.defaults.baseURL = 'http://localhost:8000/api';
+axios.defaults.withCredentials = true;
 
 const AuthContext = createContext();
 
@@ -15,25 +16,26 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      fetchUserData();
-    } else {
-      setLoading(false);
-    }
-  }, []);
+  const token = localStorage.getItem('token');
+  if (token) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    fetchUserData();
+  } else {
+    setLoading(false);
+  }
+}, []);
 
-  const fetchUserData = async () => {
-    try {
-      const response = await axios.get('/api/user');
-      setCurrentUser(response.data);
-    } catch (err) {
-      logout();
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchUserData = async () => {
+  try {
+    const response = await axios.get('/user'); // FIXED URL
+    setCurrentUser(response.data);
+  } catch (err) {
+    logout();
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const register = async (name, email, password, passwordConfirmation) => {
     try {

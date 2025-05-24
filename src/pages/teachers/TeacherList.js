@@ -10,7 +10,7 @@ const TeacherList = () => {
   useEffect(() => {
     const fetchTeachers = async () => {
       try {
-        const response = await axios.get('/api/teachers');
+        const response = await axios.get('/teachers');
         setTeachers(response.data);
         setLoading(false);
       } catch (err) {
@@ -25,7 +25,7 @@ const TeacherList = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this teacher?')) {
       try {
-        await axios.delete(`/api/teachers/${id}`);
+        await axios.delete(`/teachers/${id}`);
         setTeachers(teachers.filter(teacher => teacher.id !== id));
       } catch (err) {
         setError('Failed to delete teacher');

@@ -4,7 +4,6 @@ import axios from 'axios';
 import './TeacherForm.css'; // Import the CSS file
 
 const TeacherForm = () => {
-  
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditMode = !!id;
@@ -25,7 +24,7 @@ const TeacherForm = () => {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const response = await axios.get('/api/subjects');
+        const response = await axios.get('/subjects');  // Updated URL
         setSubjects(response.data);
       } catch (err) {
         setError('Failed to fetch subjects');
@@ -36,7 +35,7 @@ const TeacherForm = () => {
       if (isEditMode) {
         try {
           setLoading(true);
-          const response = await axios.get(`/api/teachers/${id}`);
+          const response = await axios.get(`/teachers/${id}`); // Updated URL
           const teacherData = response.data;
 
           setFormData({
@@ -60,11 +59,11 @@ const TeacherForm = () => {
   }, [id, isEditMode]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    const { name, value, type } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'number' ? Number(value) : value,
+    }));
   };
 
   const handleSubjectChange = (e) => {
@@ -77,10 +76,10 @@ const TeacherForm = () => {
       newSubjectIds = formData.subject_ids.filter(id => id !== subjectId);
     }
 
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       subject_ids: newSubjectIds
-    });
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -88,17 +87,19 @@ const TeacherForm = () => {
 
     try {
       setLoading(true);
+      setError('');
 
       if (isEditMode) {
-        await axios.put(`/api/teachers/${id}`, formData);
+        await axios.put(`/teachers/${id}`, formData); // Updated URL
       } else {
-        await axios.post('/api/teachers', formData);
+        await axios.post('/teachers', formData); // Updated URL
       }
 
       setLoading(false);
       navigate('/teachers');
     } catch (err) {
-      setError('Failed to save teacher');
+      const message = err.response?.data?.message || 'Failed to save teacher';
+      setError(message);
       setLoading(false);
     }
   };
@@ -214,6 +215,7 @@ const TeacherForm = () => {
             className="btn-secondary"
             onClick={() => navigate('/teachers')}
             aria-label="Cancel and return to teachers list"
+            disabled={loading}
           >
             Cancel
           </button>
@@ -221,6 +223,7 @@ const TeacherForm = () => {
             type="submit"
             className="btn-primary"
             aria-label={isEditMode ? 'Update teacher information' : 'Save new teacher'}
+            disabled={loading}
           >
             {isEditMode ? 'Update' : 'Save'}
           </button>

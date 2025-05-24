@@ -16,7 +16,7 @@ const GradeList = () => {
   const fetchGrades = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/grades');
+      const response = await axios.get('/grades');
       // Filter grades to only include 7-12
       const filteredGrades = response.data.filter(grade => 
         grade.level >= 7 && grade.level <= 12
@@ -40,7 +40,7 @@ const GradeList = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/api/grades/${id}`);
+      await axios.delete(`/grades/${id}`);
       setGrades(grades.filter(grade => grade.id !== id));
       setDeleteConfirm(null);
     } catch (err) {

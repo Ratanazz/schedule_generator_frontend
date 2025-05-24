@@ -6,13 +6,12 @@ import { Button } from "../components/ui/button";
 import { Calendar, Book, Users, Plus } from "lucide-react";
 import { useToast } from "../components/ui/use-toast";
 
-
 const Dashboard = () => {
   const [stats, setStats] = useState({
     teachers: 0,
     subjects: 0,
     grades: 0,
-    schedules: 0
+    schedules: 0,
   });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -20,42 +19,35 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // For demo purposes, we'll use mock data since API endpoints don't exist
-        // In a real application, you would uncomment the Promise.all code below
-        
-        /*
+        const token = localStorage.getItem('token'); // token from login
+
+        const config = {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        };
+
         const [teachers, subjects, grades, schedules] = await Promise.all([
-          axios.get('/api/teachers'),
-          axios.get('/api/subjects'),
-          axios.get('/api/grades'),
-          axios.get('/api/schedules')
+          axios.get('http://localhost:8000/api/teachers', config),
+          axios.get('http://localhost:8000/api/subjects', config),
+          axios.get('http://localhost:8000/api/grades', config),
+          axios.get('http://localhost:8000/api/schedules', config),
         ]);
 
         setStats({
           teachers: teachers.data.length,
           subjects: subjects.data.length,
           grades: grades.data.length,
-          schedules: schedules.data.length
+          schedules: schedules.data.length,
         });
-        */
-        
-        // Mock data for demonstration
-        setTimeout(() => {
-          setStats({
-            teachers: 24,
-            subjects: 18,
-            grades: 6,
-            schedules: 42
-          });
-          setLoading(false);
-        }, 1000);
-        
+
+        setLoading(false);
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        console.error("Failed to fetch dashboard stats", error);
         toast({
-          title: "Error fetching data",
-          description: "Could not load dashboard information. Please try again later.",
-          variant: "destructive"
+          title: "Error",
+          description: "Unable to load dashboard data. Please try again later.",
+          variant: "destructive",
         });
         setLoading(false);
       }
@@ -65,40 +57,40 @@ const Dashboard = () => {
   }, [toast]);
 
   const statCards = [
-    { 
-      title: "Teachers", 
-      value: stats.teachers, 
-      link: "/teachers", 
+    {
+      title: "Teachers",
+      value: stats.teachers,
+      link: "/teachers",
       icon: <Users className="h-8 w-8 text-blue-500" />,
-      color: "bg-blue-50"
+      color: "bg-blue-50",
     },
-    { 
-      title: "Subjects", 
-      value: stats.subjects, 
-      link: "/subjects", 
+    {
+      title: "Subjects",
+      value: stats.subjects,
+      link: "/subjects",
       icon: <Book className="h-8 w-8 text-green-500" />,
-      color: "bg-green-50"
+      color: "bg-green-50",
     },
-    { 
-      title: "Grades", 
-      value: stats.grades, 
-      link: "/grades", 
+    {
+      title: "Grades",
+      value: stats.grades,
+      link: "/grades",
       icon: <Users className="h-8 w-8 text-amber-500" />,
-      color: "bg-amber-50"
+      color: "bg-amber-50",
     },
-    { 
-      title: "Schedules", 
-      value: stats.schedules, 
-      link: "/schedules", 
+    {
+      title: "Schedules",
+      value: stats.schedules,
+      link: "/schedules",
       icon: <Calendar className="h-8 w-8 text-purple-500" />,
-      color: "bg-purple-50"
-    }
+      color: "bg-purple-50",
+    },
   ];
 
   const quickActions = [
     { title: "Add Teacher", link: "/teachers/create", color: "bg-blue-500 hover:bg-blue-600" },
     { title: "Add Subject", link: "/subjects/create", color: "bg-green-500 hover:bg-green-600" },
-    { title: "Create Schedule", link: "/schedules/create", color: "bg-purple-500 hover:bg-purple-600" }
+    { title: "Create Schedule", link: "/schedules/create", color: "bg-purple-500 hover:bg-purple-600" },
   ];
 
   return (
@@ -111,7 +103,7 @@ const Dashboard = () => {
           </Button>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         {statCards.map((card) => (
           <Card key={card.title} className="overflow-hidden border-t-4 border-t-primary shadow-md hover:shadow-lg transition-shadow">
