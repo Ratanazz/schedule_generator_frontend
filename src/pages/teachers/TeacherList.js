@@ -12,9 +12,9 @@ const TeacherList = () => {
       try {
         const response = await axios.get('/teachers');
         setTeachers(response.data);
-        setLoading(false);
       } catch (err) {
-        setError('Failed to fetch teachers');
+        setError('Failed to fetch teachers'); // Keeps error in state for debugging/logging
+      } finally {
         setLoading(false);
       }
     };
@@ -28,13 +28,14 @@ const TeacherList = () => {
         await axios.delete(`/teachers/${id}`);
         setTeachers(teachers.filter(teacher => teacher.id !== id));
       } catch (err) {
+        // Optional: alert('Failed to delete teacher');
         setError('Failed to delete teacher');
       }
     }
   };
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div className="error">{error}</div>;
+  // Removed error UI display here
 
   return (
     <div className="teacher-list">

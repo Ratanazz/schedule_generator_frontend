@@ -3,28 +3,24 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const GradeclassList = () => {
-  const [grades, setGrades] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchGrades();
+    fetchClasses();
   }, []);
 
-  const fetchGrades = async () => {
+  const fetchClasses = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/grades');
-      // Filter grades to only include 7-12
-      const filteredGrades = response.data.filter(grade => 
-        grade.level >= 7 && grade.level <= 12
-      );
-      setGrades(filteredGrades);
+      const response = await axios.get('/gradeclasses');
+      setClasses(response.data);
       setError('');
     } catch (err) {
-      setError('Failed to fetch grades');
+      setError('Failed to fetch grade classes');
     } finally {
       setLoading(false);
     }
@@ -40,24 +36,24 @@ const GradeclassList = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/grades/${id}`);
-      setGrades(grades.filter(grade => grade.id !== id));
+      await axios.delete(`/gradeclasses/${id}`);
+      setClasses(classes.filter(cls => cls.id !== id));
       setDeleteConfirm(null);
     } catch (err) {
-      setError('Failed to delete grade');
+      setError('Failed to delete class');
     }
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading classes...</div>;
+    return <div className="text-center py-8">Loading grade classes...</div>;
   }
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Classes (7-12)</h1>
-        <Link 
-          to="/grades/create" 
+        <h1 className="text-2xl font-bold">Grade Classes (7-12)</h1>
+        <Link
+          to="/classes/create"
           className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
         >
           Add New Class
@@ -70,9 +66,9 @@ const GradeclassList = () => {
         </div>
       )}
 
-      {grades.length === 0 ? (
+      {classes.length === 0 ? (
         <div className="bg-gray-100 rounded-lg p-6 text-center">
-          <p className="text-gray-600">No grades found. Add your first grade to get started.</p>
+          <p className="text-gray-600">No classes found. Add your first class to get started.</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -81,23 +77,27 @@ const GradeclassList = () => {
               <tr className="bg-gray-100">
                 <th className="py-2 px-4 border text-left">Grade Level</th>
                 <th className="py-2 px-4 border text-left">Section</th>
+                <th className="py-2 px-4 border text-left">Shift</th>
                 <th className="py-2 px-4 border text-left">Classroom</th>
                 <th className="py-2 px-4 border text-left"># of Students</th>
+                <th className="py-2 px-4 border text-left">Academic Year</th>
                 <th className="py-2 px-4 border text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {grades.map(grade => (
-                <tr key={grade.id}>
-                  <td className="py-2 px-4 border">Grade {grade.level}</td>
-                  <td className="py-2 px-4 border">{grade.section}</td>
-                  <td className="py-2 px-4 border">{grade.classroom || 'N/A'}</td>
-                  <td className="py-2 px-4 border">{grade.student_count || 0}</td>
+              {classes.map(cls => (
+                <tr key={cls.id}>
+                  <td className="py-2 px-4 border">Grade {cls.grade?.name || '-'}</td>
+                  <td className="py-2 px-4 border">{cls.section}</td>
+                  <td className="py-2 px-4 border">{cls.shift || '-'}</td>
+                  <td className="py-2 px-4 border">{cls.classroom || 'N/A'}</td>
+                  <td className="py-2 px-4 border">{cls.student_count || 0}</td>
+                  <td className="py-2 px-4 border">{cls.academic_year}</td>
                   <td className="py-2 px-4 border text-center">
-                    {deleteConfirm === grade.id ? (
+                    {deleteConfirm === cls.id ? (
                       <div className="flex items-center justify-center space-x-2">
                         <button
-                          onClick={() => handleDelete(grade.id)}
+                          onClick={() => handleDelete(cls.id)}
                           className="bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs"
                         >
                           Confirm
@@ -112,13 +112,13 @@ const GradeclassList = () => {
                     ) : (
                       <div className="flex items-center justify-center space-x-2">
                         <Link
-                          to={`/grades/edit/${grade.id}`}
+                          to={`/classes/edit/${cls.id}`}
                           className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded text-xs"
                         >
                           Edit
                         </Link>
                         <button
-                          onClick={() => confirmDelete(grade.id)}
+                          onClick={() => confirmDelete(cls.id)}
                           className="bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs"
                         >
                           Delete

@@ -8,36 +8,46 @@ const GradeclassForm = () => {
   const isEditing = !!id;
 
   const [formData, setFormData] = useState({
-    level: 7, // Default to grade 7
+    grade_id: '',
     section: '',
     classroom: '',
     student_count: 0,
     academic_year: new Date().getFullYear(),
+    shift: '',
     notes: ''
   });
-  
+
+  const [gradeLevels, setGradeLevels] = useState([]);
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Available grade levels for school (7-12)
-  const gradeLevels = [7, 8, 9, 10, 11, 12];
+  useEffect(() => {
+    const fetchGrades = async () => {
+      try {
+        const response = await axios.get('/grades');
+        setGradeLevels(response.data);
+      } catch (err) {
+        console.error('Failed to fetch grade levels', err);
+      }
+    };
+    fetchGrades();
+  }, []);
 
   useEffect(() => {
     const fetchGrade = async () => {
       if (!isEditing) return;
-      
+
       try {
-        const response = await axios.get(`/grades/${id}`);
+        const response = await axios.get(`/gradeclasses/${id}`);
         setFormData(response.data);
       } catch (err) {
-        setError('Failed to fetch grade data');
+        setError('Failed to fetch class data');
       } finally {
         setLoading(false);
       }
     };
-
     fetchGrade();
   }, [id, isEditing]);
 
@@ -62,48 +72,50 @@ const GradeclassForm = () => {
       setError('Section name is required');
       return false;
     }
-    
-    if (formData.level < 7 || formData.level > 12) {
-      setError('Grade level must be between 7 and 12');
+
+    if (!formData.grade_id) {
+      setError('Grade level is required');
       return false;
     }
-    
+
+    if (!formData.shift) {
+      setError('Shift is required');
+      return false;
+    }
+
     return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setSubmitting(true);
     setError('');
     setSuccess('');
-    
+
     try {
       if (isEditing) {
-        // Update existing grade
-        await axios.put(`/grades/${id}`, formData);
-        setSuccess('Grade updated successfully!');
+        await axios.put(`/gradeclasses/${id}`, formData);
+        setSuccess('Class updated successfully!');
       } else {
-        // Create new grade
-        await axios.post('/grades', formData);
-        setSuccess('Grade created successfully!');
-        
-        // Reset form for a new entry
+        await axios.post('/gradeclasses', formData);
+        setSuccess('Class created successfully!');
         setFormData({
-          level: 7,
+          grade_id: '',
           section: '',
           classroom: '',
           student_count: 0,
           academic_year: new Date().getFullYear(),
+          shift: '',
           notes: ''
         });
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Failed to save grade data';
+      const errorMessage = err.response?.data?.message || 'Failed to save class data';
       setError(errorMessage);
     } finally {
       setSubmitting(false);
@@ -118,13 +130,13 @@ const GradeclassForm = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">
-          {isEditing ? 'Edit Grade' : 'Add New Grade'}
+          {isEditing ? 'Edit Class' : 'Add New Class'}
         </h1>
         <button
-          onClick={() => navigate('/grades')}
+          onClick={() => navigate('/classes')}
           className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded"
         >
-          Back to Grades
+          Back to Classes
         </button>
       </div>
 
@@ -144,21 +156,22 @@ const GradeclassForm = () => {
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="level" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="grade_id" className="block text-sm font-medium text-gray-700 mb-1">
                 Grade Level*
               </label>
               <select
-                id="level"
-                name="level"
-                value={formData.level}
-                onChange={handleNumberChange}
+                id="grade_id"
+                name="grade_id"
+                value={formData.grade_id}
+                onChange={handleChange}
                 className="border border-gray-300 rounded px-3 py-2 w-full"
                 required
                 disabled={submitting}
               >
-                {gradeLevels.map(level => (
-                  <option key={level} value={level}>
-                    Grade {level}
+                <option value="">Select Grade</option>
+                {gradeLevels.map(grade => (
+                  <option key={grade.id} value={grade.id}>
+                    {grade.name}
                   </option>
                 ))}
               </select>
@@ -196,6 +209,24 @@ const GradeclassForm = () => {
                 disabled={submitting}
               />
             </div>
+            <div>
+              <label htmlFor="shift" className="block text-sm font-medium text-gray-700 mb-1">
+                Shift*
+              </label>
+              <select
+                id="shift"
+                name="shift"
+                value={formData.shift}
+                onChange={handleChange}
+                className="border border-gray-300 rounded px-3 py-2 w-full"
+                required
+                disabled={submitting}
+              >
+                <option value="">Select Shift</option>
+                <option value="Morning">Morning</option>
+                <option value="Afternoon">Afternoon</option>
+              </select>
+            </div>
 
             <div>
               <label htmlFor="student_count" className="block text-sm font-medium text-gray-700 mb-1">
@@ -230,6 +261,8 @@ const GradeclassForm = () => {
                 disabled={submitting}
               />
             </div>
+
+            
           </div>
 
           <div className="mt-4">
@@ -262,7 +295,7 @@ const GradeclassForm = () => {
                   Saving...
                 </>
               ) : (
-                'Save Grade'
+                'Save Class'
               )}
             </button>
           </div>
