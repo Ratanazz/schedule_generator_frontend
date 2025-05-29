@@ -17,44 +17,43 @@ const Dashboard = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const token = localStorage.getItem('token'); // token from login
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const config = {
+        headers: { Authorization: `Bearer ${token}` },
+      };
 
-        const config = {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        };
+      const results = await Promise.allSettled([
+        axios.get('http://localhost:8000/api/teachers', config),
+        axios.get('http://localhost:8000/api/subjects', config),
+        axios.get('http://localhost:8000/api/grades', config),
+        axios.get('http://localhost:8000/api/schedules', config), // will fail
+      ]);
 
-        const [teachers, subjects, grades, schedules] = await Promise.all([
-          axios.get('http://localhost:8000/api/teachers', config),
-          axios.get('http://localhost:8000/api/subjects', config),
-          axios.get('http://localhost:8000/api/grades', config),
-          axios.get('http://localhost:8000/api/schedules', config),
-        ]);
+      const [teachers, subjects, grades, schedules] = results;
 
-        setStats({
-          teachers: teachers.data.length,
-          subjects: subjects.data.length,
-          grades: grades.data.length,
-          schedules: schedules.data.length,
-        });
+      setStats({
+        teachers: teachers.status === "fulfilled" ? teachers.value.data.length : 0,
+        subjects: subjects.status === "fulfilled" ? subjects.value.data.length : 0,
+        grades: grades.status === "fulfilled" ? grades.value.data.length : 0,
+        schedules: schedules.status === "fulfilled" ? schedules.value.data.length : 0,
+      });
 
-        setLoading(false);
-      } catch (error) {
-        console.error("Failed to fetch dashboard stats", error);
-        toast({
-          title: "Error",
-          description: "Unable to load dashboard data. Please try again later.",
-          variant: "destructive",
-        });
-        setLoading(false);
-      }
-    };
+      setLoading(false);
+    } catch (error) {
+      console.error("Unexpected error", error);
+      toast({
+        title: "Error",
+        description: "Unable to load dashboard data.",
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
+  };
 
-    fetchStats();
-  }, [toast]);
+  fetchStats();
+}, [toast]);
 
   const statCards = [
     {
