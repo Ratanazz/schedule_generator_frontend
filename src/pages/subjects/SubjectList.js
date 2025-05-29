@@ -77,6 +77,7 @@ const SubjectList = () => {
               <tr className="bg-gray-100">
                 <th className="py-2 px-4 border text-left">Name</th>
                 <th className="py-2 px-4 border text-left">Code</th>
+                <th className="py-2 px-4 border text-left">Grade</th>
                 <th className="py-2 px-4 border text-left">Default Hours</th>
                 <th className="py-2 px-4 border text-left">Description</th>
                 <th className="py-2 px-4 border text-center">Actions</th>
@@ -87,6 +88,7 @@ const SubjectList = () => {
                 <tr key={subject.id}>
                   <td className="py-2 px-4 border">{subject.name}</td>
                   <td className="py-2 px-4 border">{subject.code}</td>
+                  <td className="py-2 px-4 border">{subject.grade?.name || 'N/A'}</td>
                   <td className="py-2 px-4 border">{subject.default_hours || 0} hr/week</td>
                   <td className="py-2 px-4 border">{subject.description || 'N/A'}</td>
                   <td className="py-2 px-4 border text-center">

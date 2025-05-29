@@ -10,10 +10,12 @@ const SubjectForm = () => {
   const [formData, setFormData] = useState({
     name: '',
     code: '',
+    grade_id: '',
     default_hours: 0,
     description: ''
   });
-  
+
+  const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -21,8 +23,11 @@ const SubjectForm = () => {
 
   useEffect(() => {
     const fetchSubject = async () => {
-      if (!isEditing) return;
-      
+      if (!isEditing) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await axios.get(`/subjects/${id}`);
         setFormData(response.data);
@@ -33,12 +38,22 @@ const SubjectForm = () => {
       }
     };
 
+    const fetchGrades = async () => {
+      try {
+        const res = await axios.get('/grades'); // Replace with your actual endpoint
+        setGrades(res.data);
+      } catch (err) {
+        console.error('Failed to fetch grades', err);
+      }
+    };
+
     fetchSubject();
+    fetchGrades();
   }, [id, isEditing]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prevData => ({
+    setFormData((prevData) => ({
       ...prevData,
       [name]: value
     }));
@@ -46,7 +61,7 @@ const SubjectForm = () => {
 
   const handleNumberChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prevData => ({
+    setFormData((prevData) => ({
       ...prevData,
       [name]: parseInt(value) || 0
     }));
@@ -57,40 +72,40 @@ const SubjectForm = () => {
       setError('Subject name is required');
       return false;
     }
-    
+
     if (!formData.code.trim()) {
       setError('Subject code is required');
       return false;
     }
-    
+
+    if (!formData.grade_id) {
+      setError('Please select a grade');
+      return false;
+    }
+
     return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
+
+    if (!validateForm()) return;
+
     setSubmitting(true);
     setError('');
     setSuccess('');
-    
+
     try {
       if (isEditing) {
-        // Update existing subject
         await axios.put(`/subjects/${id}`, formData);
         setSuccess('Subject updated successfully!');
       } else {
-        // Create new subject
         await axios.post('/subjects', formData);
         setSuccess('Subject created successfully!');
-        
-        // Reset form for a new entry
         setFormData({
           name: '',
           code: '',
+          grade_id: '',
           default_hours: 0,
           description: ''
         });
@@ -166,6 +181,28 @@ const SubjectForm = () => {
                 required
                 disabled={submitting}
               />
+            </div>
+
+            <div>
+              <label htmlFor="grade_id" className="block text-sm font-medium text-gray-700 mb-1">
+                Grade*
+              </label>
+              <select
+                id="grade_id"
+                name="grade_id"
+                value={formData.grade_id}
+                onChange={handleChange}
+                className="border border-gray-300 rounded px-3 py-2 w-full"
+                required
+                disabled={submitting}
+              >
+                <option value="">Select a grade</option>
+                {grades.map((grade) => (
+                  <option key={grade.id} value={grade.id}>
+                    {grade.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
