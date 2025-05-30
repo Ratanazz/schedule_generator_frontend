@@ -10,12 +10,10 @@ const SubjectForm = () => {
   const [formData, setFormData] = useState({
     name: '',
     code: '',
-    grade_id: '',
     default_hours: 0,
     description: ''
   });
 
-  const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -38,17 +36,7 @@ const SubjectForm = () => {
       }
     };
 
-    const fetchGrades = async () => {
-      try {
-        const res = await axios.get('/grades'); // Replace with your actual endpoint
-        setGrades(res.data);
-      } catch (err) {
-        console.error('Failed to fetch grades', err);
-      }
-    };
-
     fetchSubject();
-    fetchGrades();
   }, [id, isEditing]);
 
   const handleChange = (e) => {
@@ -78,11 +66,6 @@ const SubjectForm = () => {
       return false;
     }
 
-    if (!formData.grade_id) {
-      setError('Please select a grade');
-      return false;
-    }
-
     return true;
   };
 
@@ -105,7 +88,6 @@ const SubjectForm = () => {
         setFormData({
           name: '',
           code: '',
-          grade_id: '',
           default_hours: 0,
           description: ''
         });
@@ -181,28 +163,6 @@ const SubjectForm = () => {
                 required
                 disabled={submitting}
               />
-            </div>
-
-            <div>
-              <label htmlFor="grade_id" className="block text-sm font-medium text-gray-700 mb-1">
-                Grade*
-              </label>
-              <select
-                id="grade_id"
-                name="grade_id"
-                value={formData.grade_id}
-                onChange={handleChange}
-                className="border border-gray-300 rounded px-3 py-2 w-full"
-                required
-                disabled={submitting}
-              >
-                <option value="">Select a grade</option>
-                {grades.map((grade) => (
-                  <option key={grade.id} value={grade.id}>
-                    {grade.name}
-                  </option>
-                ))}
-              </select>
             </div>
 
             <div>

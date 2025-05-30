@@ -16,7 +16,7 @@ const GradeForm = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const gradeLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const gradeLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, "12 Science","12 Social"];
 
   useEffect(() => {
     const fetchGrade = async () => {
