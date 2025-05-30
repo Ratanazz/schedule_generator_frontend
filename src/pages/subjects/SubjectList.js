@@ -37,7 +37,7 @@ const SubjectList = () => {
   const handleDelete = async (id) => {
     try {
       await axios.delete(`/subjects/${id}`);
-      setSubjects(subjects.filter(subject => subject.id !== id));
+      setSubjects(subjects.filter((subject) => subject.id !== id));
       setDeleteConfirm(null);
     } catch (err) {
       setError('Failed to delete subject');
@@ -45,89 +45,194 @@ const SubjectList = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading subjects...</div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-gray-600 text-lg font-semibold animate-pulse">Loading subjects...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Subjects</h1>
-        <Link 
-          to="/subjects/create" 
-          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
+    <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">SUBJECTS</h1>
+        <Link
+          to="/subjects/create"
+          className="bg-blue-600 text-white py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition duration-300 flex items-center"
         >
+          <svg
+            className="w-5 h-5 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 4v16m8-8H4"
+            ></path>
+          </svg>
           Add New Subject
         </Link>
       </div>
 
       {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-lg">
           {error}
         </div>
       )}
 
       {subjects.length === 0 ? (
-        <div className="bg-gray-100 rounded-lg p-6 text-center">
-          <p className="text-gray-600">No subjects found. Add your first subject to get started.</p>
+        <div className="bg-white shadow-lg rounded-lg p-6 text-center">
+          <p className="text-gray-600 text-lg">
+            No subjects found. Add your first subject to get started.
+          </p>
+          <Link
+            to="/subjects/create"
+            className="mt-4 inline-block bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300"
+          >
+            Add Subject
+          </Link>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="py-2 px-4 border text-left">Name</th>
-                <th className="py-2 px-4 border text-left">Code</th>
-                <th className="py-2 px-4 border text-left">Grade</th>
-                <th className="py-2 px-4 border text-left">Default Hours</th>
-                <th className="py-2 px-4 border text-left">Description</th>
-                <th className="py-2 px-4 border text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subjects.map(subject => (
-                <tr key={subject.id}>
-                  <td className="py-2 px-4 border">{subject.name}</td>
-                  <td className="py-2 px-4 border">{subject.code}</td>
-                  <td className="py-2 px-4 border">{subject.grade?.name || 'N/A'}</td>
-                  <td className="py-2 px-4 border">{subject.default_hours || 0} hr/week</td>
-                  <td className="py-2 px-4 border">{subject.description || 'N/A'}</td>
-                  <td className="py-2 px-4 border text-center">
-                    {deleteConfirm === subject.id ? (
-                      <div className="flex items-center justify-center space-x-2">
-                        <button
-                          onClick={() => handleDelete(subject.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs"
-                        >
-                          Confirm
-                        </button>
-                        <button
-                          onClick={cancelDelete}
-                          className="bg-gray-500 hover:bg-gray-600 text-white py-1 px-2 rounded text-xs"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center space-x-2">
-                        <Link
-                          to={`/subjects/edit/${subject.id}`}
-                          className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded text-xs"
-                        >
-                          Edit
-                        </Link>
-                        <button
-                          onClick={() => confirmDelete(subject.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </td>
+        <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Code
+                  </th>
+                  
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Default Hours
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {subjects.map((subject) => (
+                  <tr
+                    key={subject.id}
+                    className="hover:bg-gray-50 transition duration-200"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {subject.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {subject.code}
+                    </td>
+                    
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {subject.default_hours || 0} hr/week
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {subject.description || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {deleteConfirm === subject.id ? (
+                        <div className="flex items-center space-x-3">
+                          <button
+                            onClick={() => handleDelete(subject.id)}
+                            className="text-red-600 hover:text-red-800 transition duration-200 flex items-center"
+                          >
+                            <svg
+                              className="w-4 h-4 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M6 18L18 6M6 6l12 12"
+                              ></path>
+                            </svg>
+                            Confirm
+                          </button>
+                          <button
+                            onClick={cancelDelete}
+                            className="text-gray-600 hover:text-gray-800 transition duration-200 flex items-center"
+                          >
+                            <svg
+                              className="w-4 h-4 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M6 18L18 6M6 6l12 12"
+                              ></path>
+                            </svg>
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-3">
+                          <Link
+                            to={`/subjects/edit/${subject.id}`}
+                            className="text-blue-600 hover:text-blue-800 transition duration-200 flex items-center"
+                          >
+                            <svg
+                              className="w-4 h-4 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              ></path>
+                            </svg>
+                            Edit
+                          </Link>
+                          <button
+                            onClick={() => confirmDelete(subject.id)}
+                            className="text-red-600 hover:text-red-800 transition duration-200 flex items-center"
+                          >
+                            <svg
+                              className="w-4 h-4 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4m-4 4v12m4-12v12"
+                              ></path>
+                            </svg>
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
