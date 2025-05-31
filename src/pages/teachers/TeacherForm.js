@@ -138,7 +138,7 @@ const TeacherForm = () => {
             name="email"
             value={formData.email}
             onChange={handleChange}
-            required
+            
             aria-required="true"
           />
         </div>
@@ -151,7 +151,7 @@ const TeacherForm = () => {
             name="phone"
             value={formData.phone}
             onChange={handleChange}
-            required
+            
             aria-required="true"
           />
         </div>

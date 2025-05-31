@@ -1,121 +1,45 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import axios from 'axios';
 
 const ScheduleGenerate = () => {
-  const { id } = useParams(); // Schedule ID
-  const navigate = useNavigate();
-  
-  const [schedule, setSchedule] = useState(null);
-  const [grades, setGrades] = useState([]);
-  const [selectedGrade, setSelectedGrade] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [scheduleResponse, gradesResponse] = await Promise.all([
-          axios.get(`/api/schedules/${id}`),
-          axios.get('/api/grades')
-        ]);
-        
-        setSchedule(scheduleResponse.data);
-        setGrades(gradesResponse.data);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to fetch required data');
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, [id]);
-  
-  const handleGradeChange = (e) => {
-    setSelectedGrade(e.target.value);
-  };
-  
-  const handleGenerateSchedule = async () => {
-    if (!selectedGrade) {
-      setError('Please select a grade');
-      return;
-    }
-    
+  const [academicYear, setAcademicYear] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    setMessage(null);
     try {
-      setGenerating(true);
-      setError('');
-      setSuccess('');
-      
-      await axios.post('/api/schedules/generate-for-grade', {
-        grade_id: selectedGrade,
-        schedule_id: id
+      const response = await axios.post('/schedule/generate', {
+        academic_year: academicYear,
       });
-      
-      setSuccess('Schedule generated successfully!');
-      setGenerating(false);
-    } catch (err) {
-      setError('Failed to generate schedule. Please try again.');
-      setGenerating(false);
+      setMessage(response.data.message);
+    } catch (error) {
+      console.error('Failed to generate schedule:', error);
+      setMessage('Error generating schedule.');
+    } finally {
+      setLoading(false);
     }
   };
-  
-  const handleViewSchedule = () => {
-    navigate(`/schedules/view/${id}?grade=${selectedGrade}`);
-  };
-  
-  if (loading) return <div>Loading...</div>;
-  
+
   return (
-    <div className="schedule-generate">
-      <h1>Generate Schedule</h1>
-      <div className="schedule-info">
-        <h2>{schedule.name}</h2>
-        <p>Academic Year: {schedule.academic_year}</p>
-        <p>Semester: {schedule.semester}</p>
-      </div>
-      
-      {error && <div className="error">{error}</div>}
-      {success && <div className="success">{success}</div>}
-      
-      <div className="generate-form">
-        <div className="form-group">
-          <label>Select Grade</label>
-          <select 
-            value={selectedGrade}
-            onChange={handleGradeChange}
-            required
-          >
-            <option value="">-- Select Grade --</option>
-            {grades.map(grade => (
-              <option key={grade.id} value={grade.id}>
-                {grade.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="form-actions">
-          <button 
-            className="btn-primary"
-            onClick={handleGenerateSchedule}
-            disabled={generating || !selectedGrade}
-          >
-            {generating ? 'Generating...' : 'Generate Schedule'}
-          </button>
-          
-          {success && (
-            <button 
-              className="btn-secondary"
-              onClick={handleViewSchedule}
-            >
-              View Generated Schedule
-            </button>
-          )}
-        </div>
-      </div>
+    <div className="p-4 max-w-md mx-auto">
+      <h2 className="text-xl font-bold mb-4">Generate Class Schedules</h2>
+      <input
+        type="text"
+        placeholder="Enter Academic Year (e.g., 2024-2025)"
+        value={academicYear}
+        onChange={(e) => setAcademicYear(e.target.value)}
+        className="w-full p-2 border rounded mb-4"
+      />
+      <button
+        onClick={handleGenerate}
+        className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+        disabled={loading || !academicYear}
+      >
+        {loading ? 'Generating...' : 'Generate Schedule'}
+      </button>
+      {message && <p className="mt-4 text-green-600">{message}</p>}
     </div>
   );
 };
