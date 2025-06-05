@@ -14,7 +14,9 @@ const TeacherForm = () => {
     phone: '',
     shift: 'AM',
     max_hours: 40,
-    subject_ids: []
+    subject_ids: [],
+    image: null,
+    image_url: '',
   });
 
   const [subjects, setSubjects] = useState([]);
@@ -24,7 +26,7 @@ const TeacherForm = () => {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const response = await axios.get('/subjects');  // Updated URL
+        const response = await axios.get('/subjects');
         setSubjects(response.data);
       } catch (err) {
         setError('Failed to fetch subjects');
@@ -35,7 +37,7 @@ const TeacherForm = () => {
       if (isEditMode) {
         try {
           setLoading(true);
-          const response = await axios.get(`/teachers/${id}`); // Updated URL
+          const response = await axios.get(`/teachers/${id}`);
           const teacherData = response.data;
 
           setFormData({
@@ -44,7 +46,9 @@ const TeacherForm = () => {
             phone: teacherData.phone,
             shift: teacherData.shift,
             max_hours: teacherData.max_hours,
-            subject_ids: teacherData.subjects.map(subject => subject.id)
+            subject_ids: teacherData.subjects.map(subject => subject.id),
+            image: null,
+            image_url: teacherData.image_url || '', // assumes your API returns image_url
           });
           setLoading(false);
         } catch (err) {
@@ -57,6 +61,13 @@ const TeacherForm = () => {
     fetchSubjects();
     fetchTeacher();
   }, [id, isEditMode]);
+
+  const handleFileChange = (e) => {
+    setFormData(prev => ({
+      ...prev,
+      image: e.target.files[0],
+    }));
+  };
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -84,15 +95,29 @@ const TeacherForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       setLoading(true);
       setError('');
 
+      const payload = new FormData();
+      payload.append('name', formData.name);
+      payload.append('email', formData.email);
+      payload.append('phone', formData.phone);
+      payload.append('shift', formData.shift);
+      payload.append('max_hours', formData.max_hours);
+      formData.subject_ids.forEach(id => payload.append('subject_ids[]', id));
+      if (formData.image) {
+        payload.append('image', formData.image);
+      }
+
       if (isEditMode) {
-        await axios.put(`/teachers/${id}`, formData); // Updated URL
+        await axios.post(`/teachers/${id}?_method=PUT`, payload, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
       } else {
-        await axios.post('/teachers', formData); // Updated URL
+        await axios.post('/teachers', payload, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
       }
 
       setLoading(false);
@@ -117,17 +142,25 @@ const TeacherForm = () => {
       )}
 
       <form onSubmit={handleSubmit} aria-label={isEditMode ? 'Edit teacher form' : 'Add teacher form'}>
-        <div className="form-group">
-          <label htmlFor="name">Name</label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-            aria-required="true"
-          />
+        <div className="form-group name-with-photo">
+          <div className="name-input">
+            <label htmlFor="name">Name</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              aria-required="true"
+            />
+          </div>
+
+          {formData.image_url && !formData.image && (
+            <div className="teacher-photo-preview">
+              <img src={formData.image_url} alt="Teacher" />
+            </div>
+          )}
         </div>
 
         <div className="form-group">
@@ -138,7 +171,6 @@ const TeacherForm = () => {
             name="email"
             value={formData.email}
             onChange={handleChange}
-            
             aria-required="true"
           />
         </div>
@@ -151,8 +183,18 @@ const TeacherForm = () => {
             name="phone"
             value={formData.phone}
             onChange={handleChange}
-            
             aria-required="true"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="image">Profile Image</label>
+          <input
+            type="file"
+            id="image"
+            name="image"
+            accept="image/*"
+            onChange={handleFileChange}
           />
         </div>
 

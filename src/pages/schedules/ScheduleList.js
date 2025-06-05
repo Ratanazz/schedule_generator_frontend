@@ -92,107 +92,105 @@ const ScheduleList = () => {
   const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">School Schedules</h1>
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto bg-white-50 min-h-screen">
+  <h1 className="text-4xl font-bold mb-8 text-blue-900">📅 School Schedules</h1>
 
-      <div className="mb-8 p-4 bg-white shadow-md rounded-lg">
-        <h2 className="text-xl font-semibold mb-3 text-gray-700">Generate New Schedules</h2>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-          <input
-            type="text"
-            placeholder="Academic Year (e.g., 2023-2024)"
-            value={academicYear}
-            onChange={(e) => {
-              setAcademicYear(e.target.value);
-              if (generateMessage) setGenerateMessage(''); // Clear message on input change
-            }}
-            className="border p-2 rounded w-full sm:w-64 focus:ring-blue-500 focus:border-blue-500"
-          />
-          <button
-            onClick={generateSchedules}
-            disabled={loadingClasses} // Disable button while generating/loading
-            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition duration-150 ease-in-out disabled:opacity-50 w-full sm:w-auto"
-          >
-            {loadingClasses ? 'Processing...' : 'Generate Schedules'}
-          </button>
-        </div>
-        {generateMessage && (
-          <p className={`mt-3 text-sm ${generateMessage.includes('Error') || generateMessage.includes('Failed') ? 'text-red-600' : 'text-green-600'}`}>
-            {generateMessage}
-          </p>
-        )}
-      </div>
-
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-3 text-gray-700">Select a Class to View Schedule</h2>
-        {loadingClasses && <p className="text-gray-600">Loading classes...</p>}
-        {!loadingClasses && classes.length === 0 && (
-          <p className="text-gray-600">No classes found. Try generating schedules or adding classes.</p>
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {classes.map((cls) => (
-            <div
-              key={cls.id}
-              className={`p-4 border rounded-lg shadow-sm cursor-pointer transition-all duration-150 ease-in-out 
-                           ${selectedClassData && selectedClassData.name === `${cls.grade.name} ${cls.section}` ? 'bg-blue-100 border-blue-400' : 'bg-white hover:bg-gray-50 hover:shadow-md'}`}
-              onClick={() => fetchSchedule(cls.id)}
-            >
-              <h3 className="text-lg font-semibold text-blue-700">
-                {cls.grade?.name || 'N/A'} {cls.section || ''}
-              </h3>
-              <p className="text-sm text-gray-600">Shift: {cls.shift || 'N/A'}</p>
-              <p className="text-sm text-gray-600">Year: {cls.academic_year || 'N/A'}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-
-      {loadingSchedule && <p className="text-center text-gray-600 py-4">Loading schedule...</p>}
-      {fetchScheduleError && <p className="text-center text-red-600 py-4">{fetchScheduleError}</p>}
-
-      {!loadingSchedule && selectedClassData && schedule && (
-        <div className="mt-6 bg-white shadow-xl rounded-lg p-4 sm:p-6">
-          <h2 className="text-2xl font-semibold mb-1 text-gray-800">
-            Schedule for {selectedClassData.name}
-          </h2>
-          <div className="text-sm text-gray-600 mb-4">
-            <span>Shift: {selectedClassData.shift}</span>
-            <span className="mx-2">|</span>
-            <span>Classroom: {selectedClassData.classroom || 'N/A'}</span>
-            <span className="mx-2">|</span>
-            <span>Academic Year: {selectedClassData.academic_year}</span>
-          </div>
-
-          {Object.keys(schedule).length === 0 && !fetchScheduleError && (
-            <p className="text-center text-gray-500 py-6">No schedule data available for this class.</p>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {daysOrder
-              .filter(day => schedule[day] && schedule[day].length > 0) // Only render days that have schedule entries
-              .map((day) => (
-              <div key={day} className="bg-gray-50 p-4 rounded-md shadow-sm border">
-                <h3 className="font-bold text-lg mb-3 text-gray-700 capitalize">{day}</h3>
-                {schedule[day] && schedule[day].length > 0 ? (
-                  <ul className="space-y-2">
-                    {schedule[day].map((slot, i) => (
-                      <li key={i} className="text-sm p-2 bg-white rounded border border-gray-200">
-                        <div className="font-semibold text-blue-600">{slot.time}</div>
-                        <div className="text-gray-700">{slot.subject}</div>
-                        <div className="text-gray-500 text-xs">Teacher: {slot.teacher}</div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-gray-500">No classes scheduled for {day}.</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+  <div className="mb-8 p-6 bg-white shadow-lg rounded-2xl">
+    <h2 className="text-2xl font-semibold mb-4 text-blue-800">Generate New Schedules</h2>
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+      <input
+        type="text"
+        placeholder="Academic Year (e.g., 2023-2024)"
+        value={academicYear}
+        onChange={(e) => {
+          setAcademicYear(e.target.value);
+          if (generateMessage) setGenerateMessage('');
+        }}
+        className="border p-3 rounded-md w-full sm:w-64 focus:ring-blue-500 focus:border-blue-500"
+      />
+      <button
+        onClick={generateSchedules}
+        disabled={loadingClasses}
+        className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50 w-full sm:w-auto"
+      >
+        {loadingClasses ? 'Processing...' : 'Generate Schedules'}
+      </button>
     </div>
+    {generateMessage && (
+      <p className={`mt-4 text-sm ${generateMessage.includes('Error') || generateMessage.includes('Failed') ? 'text-red-600' : 'text-green-600'}`}>
+        {generateMessage}
+      </p>
+    )}
+  </div>
+
+  <div className="mb-10">
+    <h2 className="text-2xl font-semibold mb-4 text-blue-800">Select a Class</h2>
+    {loadingClasses && <p className="text-gray-700">Loading classes...</p>}
+    {!loadingClasses && classes.length === 0 && (
+      <p className="text-gray-700">No classes found. Generate schedules or add classes first.</p>
+    )}
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+      {classes.map((cls) => (
+        <div
+          key={cls.id}
+          className={`p-4 rounded-xl shadow-md cursor-pointer transition duration-150 
+            ${selectedClassData && selectedClassData.name === `${cls.grade.name} ${cls.section}`
+              ? 'bg-blue-100 border border-blue-400'
+              : 'bg-white hover:bg-blue-100 hover:shadow-lg'}`}
+          onClick={() => fetchSchedule(cls.id)}
+        >
+          <h3 className="text-lg font-semibold text-blue-700">
+            {cls.grade?.name || 'N/A'} {cls.section || ''}
+          </h3>
+          <p className="text-sm text-gray-600">Shift: {cls.shift || 'N/A'}</p>
+          <p className="text-sm text-gray-600">Year: {cls.academic_year || 'N/A'}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  {loadingSchedule && <p className="text-center text-gray-600 py-4">Loading schedule...</p>}
+  {fetchScheduleError && <p className="text-center text-red-600 py-4">{fetchScheduleError}</p>}
+
+  {!loadingSchedule && selectedClassData && schedule && (
+    <div className="bg-white rounded-2xl shadow-xl p-6">
+      <h2 className="text-2xl font-bold text-blue-800 mb-2">
+        Schedule for {selectedClassData.name}
+      </h2>
+      <div className="text-sm text-gray-700 mb-6 space-x-4">
+        <span>Shift: {selectedClassData.shift}</span>
+        <span>|</span>
+        <span>Classroom: {selectedClassData.classroom || 'N/A'}</span>
+        <span>|</span>
+        <span>Academic Year: {selectedClassData.academic_year}</span>
+      </div>
+
+      {Object.keys(schedule).length === 0 && !fetchScheduleError && (
+        <p className="text-center text-gray-500 py-6">No schedule data available for this class.</p>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {daysOrder
+          .filter(day => schedule[day] && schedule[day].length > 0)
+          .map((day) => (
+            <div key={day} className="bg-blue-100 p-4 rounded-lg shadow border border-blue-200">
+              <h3 className="text-lg font-bold mb-3 text-blue-900 capitalize">{day}</h3>
+              <ul className="space-y-2">
+                {schedule[day].map((slot, i) => (
+                  <li key={i} className="p-3 bg-white rounded-md border border-gray-300">
+                    <div className="font-medium text-blue-700">{slot.time}</div>
+                    <div className="text-gray-800">{slot.subject}</div>
+                    <div className="text-gray-500 text-xs">Teacher: {slot.teacher}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
+
   );
 };
 

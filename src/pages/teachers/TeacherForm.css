@@ -139,4 +139,25 @@
   .btn-secondary {
     width: 100%;
   }
+
+.name-with-photo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.name-input {
+  flex: 1;
+}
+
+.teacher-photo-preview img {
+  max-width: 100px;
+  max-height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+
 }
