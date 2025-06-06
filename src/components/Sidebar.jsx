@@ -12,33 +12,30 @@ import {
   FaBars,
   FaHome,
   FaUserCircle
-} from 'react-icons/fa'; // Example icons from Font Awesome
+} from 'react-icons/fa';
 
 const Sidebar = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation(); // To close sidebar on navigation
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
       await logout();
       navigate('/login');
-      setIsOpen(false); // Close sidebar on logout
+      setIsOpen(false);
     } catch (error) {
       console.error("Failed to log out", error);
-      // Handle logout error (e.g., show a notification)
     }
   };
 
-  // Close sidebar on route change (for mobile)
+  // Close sidebar on route change (for mobile view)
   useEffect(() => {
-    if (isOpen) {
+    if (window.innerWidth < 768 && isOpen) {
       setIsOpen(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
-
+  }, [location.pathname, isOpen]);
 
   if (!currentUser) return null;
 
@@ -51,7 +48,6 @@ const Sidebar = () => {
 
   const iconClasses = "mr-3 h-5 w-5 text-gray-400 group-hover:text-blue-300 transition-colors duration-200 ease-in-out";
   const activeIconClasses = "mr-3 h-5 w-5 text-white";
-
 
   return (
     <>
@@ -67,17 +63,13 @@ const Sidebar = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-72 bg-gradient-to-b from-gray-800 to-gray-900 text-white flex flex-col shadow-2xl transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-gray-800 to-gray-900 text-white flex flex-col shadow-2xl transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0 z-40 print:hidden`} // Added print:hidden
+        } md:translate-x-0 z-40 print:hidden`}
       >
-        {/* Logo/Brand Area */}
+        {/* Logo */}
         <div className="p-5 border-b border-gray-700/50">
-          <NavLink
-            to="/"
-            className="flex items-center space-x-3 group"
-            title="Go to Dashboard"
-          >
+          <NavLink to="/" className="flex items-center space-x-3 group" title="Go to Dashboard">
             <FaHome className="h-8 w-8 text-blue-400 group-hover:text-blue-300 transition-colors" />
             <span className="text-xl font-semibold text-white group-hover:text-blue-300 transition-colors whitespace-nowrap">
               Scheduler Pro
@@ -91,7 +83,7 @@ const Sidebar = () => {
             { to: "/teachers", icon: FaChalkboardTeacher, label: "Teachers" },
             { to: "/subjects", icon: FaBook, label: "Subjects" },
             { to: "/grades", icon: FaGraduationCap, label: "Grades" },
-            { to: "/classes", icon: FaSchool, label: "Classes" }, // Changed label for clarity
+            { to: "/classes", icon: FaSchool, label: "Classes" },
             { to: "/schedules", icon: FaCalendarAlt, label: "Schedules" },
           ].map((item) => (
             <NavLink key={item.to} to={item.to} className={navLinkClasses}>
@@ -105,19 +97,22 @@ const Sidebar = () => {
           ))}
         </nav>
 
-        {/* User Area */}
+        {/* User Info & Logout */}
         <div className="p-5 border-t border-gray-700/50 mt-auto">
           <div className="flex items-center space-x-3 mb-3">
             {currentUser.photoURL ? (
-                <img src={currentUser.photoURL} alt={currentUser.displayName || currentUser.email} className="h-10 w-10 rounded-full object-cover border-2 border-blue-500" />
+              <img
+                src={currentUser.photoURL}
+                alt={currentUser.displayName || currentUser.email}
+                className="h-10 w-10 rounded-full object-cover border-2 border-blue-500"
+              />
             ) : (
-                <FaUserCircle className="h-10 w-10 text-gray-400" />
+              <FaUserCircle className="h-10 w-10 text-gray-400" />
             )}
             <div>
-              <p className="text-sm font-semibold text-white truncate max-w-[150px]" title={currentUser.displayName || currentUser.email}>
-                {currentUser.displayName || currentUser.email || 'User'}
+              <p className="text-sm font-semibold text-white truncate max-w-[150px]" title={currentUser.displayName || currentUser.name}>
+                {currentUser.displayName || currentUser.name || 'User'}
               </p>
-              {/* <p className="text-xs text-gray-400">Admin</p> Could add role here */}
             </div>
           </div>
           <button
@@ -131,13 +126,13 @@ const Sidebar = () => {
         </div>
       </aside>
 
-      {/* Overlay for mobile when sidebar is open */}
+      {/* Overlay for mobile */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm md:hidden z-30"
           onClick={() => setIsOpen(false)}
           aria-hidden="true"
-        ></div>
+        />
       )}
     </>
   );
