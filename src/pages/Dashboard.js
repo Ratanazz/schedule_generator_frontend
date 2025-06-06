@@ -11,7 +11,7 @@ const Dashboard = () => {
     teachers: 0,
     subjects: 0,
     grades: 0,
-    schedules: 0,
+    gradeclasses: 0,
   });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -25,19 +25,19 @@ const Dashboard = () => {
       };
 
       const results = await Promise.allSettled([
-        axios.get('http://localhost:8000/api/teachers', config),
-        axios.get('http://localhost:8000/api/subjects', config),
-        axios.get('http://localhost:8000/api/grades', config),
-        axios.get('http://localhost:8000/api/schedules', config), // will fail
+        axios.get('/teachers', config),
+        axios.get('/subjects', config),
+        axios.get('/grades', config),
+        axios.get('/gradeclasses', config), // will fail
       ]);
 
-      const [teachers, subjects, grades, schedules] = results;
+      const [teachers, subjects, grades, gradeclasses] = results;
 
       setStats({
         teachers: teachers.status === "fulfilled" ? teachers.value.data.length : 0,
         subjects: subjects.status === "fulfilled" ? subjects.value.data.length : 0,
         grades: grades.status === "fulfilled" ? grades.value.data.length : 0,
-        schedules: schedules.status === "fulfilled" ? schedules.value.data.length : 0,
+        gradeclasses: gradeclasses.status === "fulfilled" ? gradeclasses.value.data.length : 0,
       });
 
       setLoading(false);
@@ -53,7 +53,7 @@ const Dashboard = () => {
   };
 
   fetchStats();
-}, [toast]);
+}, []);
 
   const statCards = [
     {
@@ -78,9 +78,9 @@ const Dashboard = () => {
       color: "bg-amber-50",
     },
     {
-      title: "Schedules",
-      value: stats.schedules,
-      link: "/schedules",
+      title: "CLASSROOMS",
+      value: stats.gradeclasses,
+      link: "/gradeclasses",
       icon: <Calendar className="h-8 w-8 text-purple-500" />,
       color: "bg-purple-50",
     },
@@ -89,7 +89,7 @@ const Dashboard = () => {
   const quickActions = [
     { title: "Add Teacher", link: "/teachers/create", color: "bg-blue-500 hover:bg-blue-600" },
     { title: "Add Subject", link: "/subjects/create", color: "bg-green-500 hover:bg-green-600" },
-    { title: "Create Schedule", link: "/schedules/create", color: "bg-purple-500 hover:bg-purple-600" },
+    { title: "Create Schedule", link: "/gradeclasses/create", color: "bg-purple-500 hover:bg-purple-600" },
   ];
 
   return (

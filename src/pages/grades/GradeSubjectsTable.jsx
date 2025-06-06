@@ -1,56 +1,92 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const GradeSubjectsTable = ({ gradeId, subjects }) => {
-  const [subjectList, setSubjectList] = useState(subjects);
+const GradeSubjectsTable = ({ grade, allSubjects, onUpdate }) => {
+  const [subjects, setSubjects] = useState(grade.subjects);
 
-  const handleStudyHourChange = async (subjectId, hours) => {
+  const updateStudyHour = async (subjectId, hours) => {
     try {
-      const updated = subjectList.map(s => s.id === subjectId ? { ...s, pivot: { ...s.pivot, study_hours: hours } } : s);
-      setSubjectList(updated);
-      await axios.put(`/grades/${gradeId}/subjects/${subjectId}`, { study_hours: hours });
+      await axios.put(`/grades/${grade.id}/subjects/${subjectId}`, { study_hours: hours });
+      onUpdate(); // Refresh from parent
     } catch {
-      alert('Failed to update study hours');
+      alert('Failed to update');
     }
   };
 
-  const handleRemove = async (subjectId) => {
+  const removeSubject = async (subjectId) => {
     try {
-      await axios.delete(`/grades/${gradeId}/subjects/${subjectId}`);
-      setSubjectList(subjectList.filter(s => s.id !== subjectId));
+      await axios.delete(`/grades/${grade.id}/subjects/${subjectId}`);
+      onUpdate();
     } catch {
-      alert('Failed to remove subject');
+      alert('Failed to remove');
     }
   };
+
+  const addSubject = async (subjectId) => {
+    try {
+      await axios.post(`/grades/${grade.id}/subjects`, { subject_id: subjectId });
+      onUpdate();
+    } catch {
+      alert('Failed to add');
+    }
+  };
+
+  const availableSubjects = allSubjects.filter(s => !subjects.some(g => g.id === s.id));
 
   return (
-    <table className="w-full border mt-2">
-      <thead className="bg-gray-100">
-        <tr>
-          <th className="p-2 border">Subject</th>
-          <th className="p-2 border">Study Hours</th>
-          <th className="p-2 border">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {subjectList.map(sub => (
-          <tr key={sub.id}>
-            <td className="p-2 border">{sub.name}</td>
-            <td className="p-2 border">
-              <input
-                type="number"
-                value={sub.pivot.study_hours}
-                onChange={(e) => handleStudyHourChange(sub.id, parseInt(e.target.value))}
-                className="w-20 px-2 py-1 border rounded"
-              />
-            </td>
-            <td className="p-2 border">
-              <button onClick={() => handleRemove(sub.id)} className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-xs rounded">Remove</button>
-            </td>
+    <div className="space-y-4">
+      <table className="w-full table-auto text-sm">
+        <thead className="bg-gray-100 text-left">
+          <tr>
+            <th className="p-2">Subject</th>
+            <th className="p-2">Hours</th>
+            <th className="p-2">Actions</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {subjects.map(subject => (
+            <tr key={subject.id} className="border-b">
+              <td className="p-2">{subject.name}</td>
+              <td className="p-2">
+                <input
+                  type="number"
+                  className="w-20 border rounded px-2 py-1"
+                  defaultValue={subject.pivot?.study_hours || 0}
+                  onBlur={(e) => updateStudyHour(subject.id, parseInt(e.target.value))}
+                />
+              </td>
+              <td className="p-2">
+                <button
+                  onClick={() => removeSubject(subject.id)}
+                  className="text-red-500 hover:underline text-xs"
+                >
+                  Remove
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {availableSubjects.length > 0 && (
+        <div>
+          <select
+            defaultValue=""
+            onChange={(e) => {
+              const id = parseInt(e.target.value);
+              if (!isNaN(id)) addSubject(id);
+              e.target.value = '';
+            }}
+            className="border rounded px-3 py-2 text-sm"
+          >
+            <option value="">Add Subject...</option>
+            {availableSubjects.map(subject => (
+              <option key={subject.id} value={subject.id}>{subject.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+    </div>
   );
 };
 
