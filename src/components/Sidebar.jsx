@@ -1,93 +1,142 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  FaChalkboardTeacher,
+  FaBook,
+  FaGraduationCap,
+  FaSchool,
+  FaCalendarAlt,
+  FaSignOutAlt,
+  FaTimes,
+  FaBars,
+  FaHome,
+  FaUserCircle
+} from 'react-icons/fa'; // Example icons from Font Awesome
 
 const Sidebar = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation(); // To close sidebar on navigation
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+      setIsOpen(false); // Close sidebar on logout
+    } catch (error) {
+      console.error("Failed to log out", error);
+      // Handle logout error (e.g., show a notification)
+    }
   };
 
+  // Close sidebar on route change (for mobile)
+  useEffect(() => {
+    if (isOpen) {
+      setIsOpen(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+
   if (!currentUser) return null;
+
+  const navLinkClasses = ({ isActive }) =>
+    `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ease-in-out group ${
+      isActive
+        ? 'bg-blue-600 text-white shadow-md'
+        : 'text-gray-300 hover:bg-gray-700/50 hover:text-blue-300'
+    }`;
+
+  const iconClasses = "mr-3 h-5 w-5 text-gray-400 group-hover:text-blue-300 transition-colors duration-200 ease-in-out";
+  const activeIconClasses = "mr-3 h-5 w-5 text-white";
+
 
   return (
     <>
       {/* Mobile Toggle Button */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 text-white rounded-md"
+        className="md:hidden fixed top-4 left-4 z-50 p-2.5 bg-gray-800/80 backdrop-blur-sm text-white rounded-full shadow-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
         onClick={() => setIsOpen(!isOpen)}
+        aria-label={isOpen ? "Close menu" : "Open menu"}
+        aria-expanded={isOpen}
       >
-        {isOpen ? 'Close' : 'Menu'}
+        {isOpen ? <FaTimes className="h-5 w-5" /> : <FaBars className="h-5 w-5" />}
       </button>
 
       {/* Sidebar */}
-      <div
-        className={`fixed top-0 left-0 h-screen w-64 bg-gray-900 text-white flex flex-col shadow-xl transform transition-transform duration-300 ${
+      <aside
+        className={`fixed top-0 left-0 h-full w-72 bg-gradient-to-b from-gray-800 to-gray-900 text-white flex flex-col shadow-2xl transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0 z-40`}
+        } md:translate-x-0 z-40 print:hidden`} // Added print:hidden
       >
-        <div className="p-6 border-b border-gray-700">
-          <Link
+        {/* Logo/Brand Area */}
+        <div className="p-5 border-b border-gray-700/50">
+          <NavLink
             to="/"
-            className="text-xl font-bold text-white hover:text-blue-300 transition-colors"
+            className="flex items-center space-x-3 group"
+            title="Go to Dashboard"
           >
-            School Schedule Generator
-          </Link>
+            <FaHome className="h-8 w-8 text-blue-400 group-hover:text-blue-300 transition-colors" />
+            <span className="text-xl font-semibold text-white group-hover:text-blue-300 transition-colors whitespace-nowrap">
+              Scheduler Pro
+            </span>
+          </NavLink>
         </div>
-        <nav className="flex-1 px-4 py-6 space-y-3">
-          <Link
-            to="/teachers"
-            className="block px-4 py-2 text-base font-medium rounded-lg hover:bg-gray-700 hover:text-blue-300 transition-colors"
-          >
-            Teachers
-          </Link>
-          <Link
-            to="/subjects"
-            className="block px-4 py-2 text-base font-medium rounded-lg hover:bg-gray-700 hover:text-blue-300 transition-colors"
-          >
-            Subjects
-          </Link>
-          <Link
-            to="/grades"
-            className="block px-4 py-2 text-base font-medium rounded-lg hover:bg-gray-700 hover:text-blue-300 transition-colors"
-          >
-            Grades
-          </Link>
-          <Link
-            to="/classes"
-            className="block px-4 py-2 text-base font-medium rounded-lg hover:bg-gray-700 hover:text-blue-300 transition-colors"
-          >
-            Class
-          </Link>
-          <Link
-            to="/schedules"
-            className="block px-4 py-2 text-base font-medium rounded-lg hover:bg-gray-700 hover:text-blue-300 transition-colors"
-          >
-            Schedules
-          </Link>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          {[
+            { to: "/teachers", icon: FaChalkboardTeacher, label: "Teachers" },
+            { to: "/subjects", icon: FaBook, label: "Subjects" },
+            { to: "/grades", icon: FaGraduationCap, label: "Grades" },
+            { to: "/classes", icon: FaSchool, label: "Classes" }, // Changed label for clarity
+            { to: "/schedules", icon: FaCalendarAlt, label: "Schedules" },
+          ].map((item) => (
+            <NavLink key={item.to} to={item.to} className={navLinkClasses}>
+              {({ isActive }) => (
+                <>
+                  <item.icon className={isActive ? activeIconClasses : iconClasses} />
+                  {item.label}
+                </>
+              )}
+            </NavLink>
+          ))}
         </nav>
-        <div className="p-6 border-t border-gray-700">
-          <div className="flex items-center justify-between">
-            <span className="text-base font-medium truncate">{currentUser.name}</span>
-            <button
-              onClick={handleLogout}
-              className="px-3 py-1 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700 transition-colors"
-            >
-              Logout
-            </button>
+
+        {/* User Area */}
+        <div className="p-5 border-t border-gray-700/50 mt-auto">
+          <div className="flex items-center space-x-3 mb-3">
+            {currentUser.photoURL ? (
+                <img src={currentUser.photoURL} alt={currentUser.displayName || currentUser.email} className="h-10 w-10 rounded-full object-cover border-2 border-blue-500" />
+            ) : (
+                <FaUserCircle className="h-10 w-10 text-gray-400" />
+            )}
+            <div>
+              <p className="text-sm font-semibold text-white truncate max-w-[150px]" title={currentUser.displayName || currentUser.email}>
+                {currentUser.displayName || currentUser.email || 'User'}
+              </p>
+              {/* <p className="text-xs text-gray-400">Admin</p> Could add role here */}
+            </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center px-4 py-2.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition-colors duration-200"
+            title="Logout"
+          >
+            <FaSignOutAlt className="mr-2 h-4 w-4" />
+            Logout
+          </button>
         </div>
-      </div>
+      </aside>
 
       {/* Overlay for mobile when sidebar is open */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 md:hidden z-30"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm md:hidden z-30"
           onClick={() => setIsOpen(false)}
+          aria-hidden="true"
         ></div>
       )}
     </>

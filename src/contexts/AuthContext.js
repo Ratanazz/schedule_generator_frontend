@@ -37,25 +37,26 @@ const fetchUserData = async () => {
 };
 
 
-  const register = async (name, email, password, passwordConfirmation) => {
-    try {
-      setError('');
-      const response = await axios.post('/register', {
-        name,
-        email,
-        password,
-        password_confirmation: passwordConfirmation,
-      });
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setCurrentUser(user);
-      return true;
-    } catch (err) {
-      setError(err.response?.data?.errors || err.response?.data?.message || 'Failed to register');
-      return false;
-    }
+  const register = async ({ name, email, password, password_confirmation }) => {
+  try {
+    setError('');
+    const response = await axios.post('/register', {
+      name,
+      email,
+      password,
+      password_confirmation,
+    });
+    const { token, user } = response.data;
+    localStorage.setItem('token', token);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    setCurrentUser(user);
+    return true;
+  } catch (err) {
+    setError(err.response?.data?.errors || err.response?.data?.message || 'Failed to register');
+    return false;
+  }
   };
+
 
   const login = async (email, password) => {
     try {

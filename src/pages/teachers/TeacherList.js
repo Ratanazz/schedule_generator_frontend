@@ -183,7 +183,7 @@ const TeacherList = () => {
                           <img
                             // --- THE FIX IS HERE ---
                             src={teacher.image_url ? teacher.image_url : 'https://via.placeholder.com/40'}
-                            alt={teacher.name}
+                            alt={'Teacher profile'}
                             className="w-10 h-10 rounded-full object-cover"
                             // Optional: Add an error handler for broken images
                             onError={(e) => {
