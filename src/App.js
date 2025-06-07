@@ -4,7 +4,7 @@ import { Toaster } from 'sonner';
 import { TooltipProvider } from './components/ui/tooltip';
 import Dashboard from './pages/Dashboard';
 import TeacherList from './pages/teachers/TeacherList';
-import TeacherForm from './pages/teachers/TeacherForm';
+
 import SubjectList from './pages/subjects/SubjectList';
 import SubjectForm from './pages/subjects/SubjectForm';
 import GradeclassList from './pages/gradeclass/GradeclassList';
@@ -44,8 +44,8 @@ const AppContent = () => {
 
           {/* Teacher Routes */}
           <Route path="/teachers" element={<ProtectedRoute><TeacherList /></ProtectedRoute>} />
-          <Route path="/teachers/create" element={<ProtectedRoute><TeacherForm /></ProtectedRoute>} />
-          <Route path="/teachers/edit/:id" element={<ProtectedRoute><TeacherForm /></ProtectedRoute>} />
+          
+          
 
           {/* Subject Routes */}
           <Route path="/subjects" element={<ProtectedRoute><SubjectList /></ProtectedRoute>} />

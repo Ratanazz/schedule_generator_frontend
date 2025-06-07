@@ -1,16 +1,55 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Link } from 'react-router-dom'; // Link might still be used for other things
 import axios from 'axios';
+import TeacherFormModal from './TeacherFormModal'; // Adjust path if necessary
 
-// Modal Component (can be in the same file or a separate one)
-const TeacherDetailModal = ({ teacher, onClose }) => {
+// TeacherDetailModal Component (as you provided)
+
+const TeacherDetailModal = ({ teacher, onClose, onDelete, onEdit }) => { // Added onEdit prop
+  const modalRef = useRef();
+  useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.keyCode === 27) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [onClose]);
   if (!teacher) return null;
+  
+  const defaultImageUrl = 'https://i.ibb.co/qY3TgFny/307ce493-b254-4b2d-8ba4-d12c080d6651.jpg';
+  
+  const handleDeleteClick = () => {
+    onDelete(teacher.id);
+  };
+  
+  const handleEditClick = () => {
+    onEdit(teacher); // Pass the teacher to the onEdit handler
+  };
+  
+  
+  // Effect for closing modal with ESC key
+  
 
-  const defaultImageUrl = 'https://i.ibb.co/qY3TgFny/307ce493-b254-4b2d-8ba4-d12c080d6651.jpg'; // Default placeholder
+  // Effect for click outside to close (Optional, can conflict if other modals are layered)
+  // useEffect(() => {
+  //   const handleClickOutside = (event) => {
+  //     if (modalRef.current && !modalRef.current.contains(event.target)) {
+  //       onClose();
+  //     }
+  //   };
+  //   document.addEventListener('mousedown', handleClickOutside);
+  //   return () => {
+  //     document.removeEventListener('mousedown', handleClickOutside);
+  //   };
+  // }, [onClose]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4 transition-opacity duration-300 ease-in-out">
-      <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl max-w-lg w-full transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-modalShow">
+      <div ref={modalRef} className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl max-w-lg w-full transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-modalShow">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">Teacher Details</h2>
           <button
@@ -55,7 +94,7 @@ const TeacherDetailModal = ({ teacher, onClose }) => {
             {teacher.subjects && Array.isArray(teacher.subjects) && teacher.subjects.length > 0 ? (
               <ul className="list-disc list-inside ml-1 mt-1 space-y-1">
                 {teacher.subjects.map((s, index) => (
-                  <li key={index} className="text-gray-800">
+                  <li key={s?.id || index} className="text-gray-800">
                     {s && s.name ? s.name : 'Unnamed Subject'}
                   </li>
                 ))}
@@ -66,17 +105,22 @@ const TeacherDetailModal = ({ teacher, onClose }) => {
           </div>
         </div>
 
-        <div className="mt-8 flex justify-end space-x-3">
-           <Link
-            to={`/teachers/edit/${teacher.id}`}
-            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 transition duration-150 shadow-sm"
-            onClick={onClose} // Close modal when navigating
+        <div className="mt-8 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+           <button // Changed Link to button for consistency with modal pattern
+            onClick={handleEditClick}
+            className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 transition duration-150 shadow-sm text-center"
           >
             Edit Teacher
-          </Link>
+          </button>
+          <button
+            onClick={handleDeleteClick}
+            className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition duration-150 shadow-sm"
+          >
+            Delete Teacher
+          </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-300 transition duration-150 shadow-sm"
+            className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-300 transition duration-150 shadow-sm"
           >
             Close
           </button>
@@ -105,49 +149,61 @@ const TeacherList = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [selectedTeacher, setSelectedTeacher] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // For Detail Modal
+  const [selectedTeacherDetail, setSelectedTeacherDetail] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // For Form Modal (Add/Edit)
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState(null); // null for Add, teacher object for Edit
 
   const defaultImageUrl = 'https://i.ibb.co/qY3TgFny/307ce493-b254-4b2d-8ba4-d12c080d6651.jpg';
 
+  const fetchTeachers = async () => {
+    // Keep setLoading(true) at the beginning of the actual fetch operation
+    // For refreshes, you might want a different loading indicator or none
+    // For now, let's keep it simple for initial load
+    // setLoading(true); // This can cause a full page loader on every refresh
+    setError(null);
+    try {
+      const response = await axios.get('/teachers');
+      setTeachers(response.data);
+    } catch (err) {
+      console.error("API Error:", err);
+      setError('Failed to fetch teachers. Please check the API endpoint or network connection.');
+      setTeachers([]);
+    } finally {
+      if(loading) setLoading(false); // Only set loading to false on initial load
+    }
+  };
 
   useEffect(() => {
-    const fetchTeachers = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await axios.get('/teachers'); // *** Reverted to use your API endpoint ***
-        setTeachers(response.data);
-      } catch (err) {
-        console.error("API Error:", err);
-        setError('Failed to fetch teachers. Please check the API endpoint or network connection.');
-        setTeachers([]); // Set to empty array on error
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    setLoading(true); // Set loading true for the initial fetch
     fetchTeachers();
   }, []); // Empty dependency array means this runs once on mount
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this teacher?')) {
+    if (window.confirm('Are you sure you want to delete this teacher? This action cannot be undone.')) {
       try {
-        await axios.delete(`/teachers/${id}`); // Your API for delete
-        setTeachers(teachers.filter((teacher) => teacher.id !== id));
-        if (selectedTeacher && selectedTeacher.id === id) {
-          closeModal();
+        await axios.delete(`/teachers/${id}`);
+        // Instead of filtering, re-fetch to get the most up-to-date list
+        // and handle pagination adjustments correctly based on server state.
+        fetchTeachers(); // Re-fetch teachers
+
+        // Close detail modal if the deleted teacher was shown there
+        if (selectedTeacherDetail && selectedTeacherDetail.id === id) {
+          closeDetailModal();
         }
-        // Adjust current page if the last item on the page was deleted
-        const newTotalPages = Math.max(1, Math.ceil((filteredTeachers.length - 1) / itemsPerPage));
-        if (currentPage > newTotalPages) {
-            setCurrentPage(newTotalPages);
-        }
+        // No need to manually adjust currentPage if re-fetching, 
+        // but you might want to if you prefer client-side filtering after delete for speed.
+        // For simplicity, re-fetching is more robust.
       } catch (err) {
-        setError('Failed to delete teacher');
+        console.error("Delete Error:", err);
+        setError(`Failed to delete teacher. ${err.response?.data?.message || err.message}`);
       }
     }
   };
+
 
   const filteredTeachers = useMemo(() => {
     if (!searchTerm) {
@@ -210,26 +266,49 @@ const TeacherList = () => {
     }
   };
 
+  // --- Detail Modal ---
   const handleRowClick = (teacher) => {
-    setSelectedTeacher(teacher);
-    setIsModalOpen(true);
+    setSelectedTeacherDetail(teacher);
+    setIsDetailModalOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedTeacher(null);
+  const closeDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedTeacherDetail(null);
+  };
+
+  // --- Form Modal (Add/Edit) ---
+  const openAddTeacherModal = () => {
+    setEditingTeacher(null); // Clear any previous editing teacher
+    setIsFormModalOpen(true);
+  };
+
+  const openEditTeacherModal = (teacher) => {
+    setEditingTeacher(teacher);
+    setIsFormModalOpen(true);
+    if(isDetailModalOpen) setIsDetailModalOpen(false); // Close detail modal if opening edit from there
+  };
+
+  const closeFormModal = () => {
+    setIsFormModalOpen(false);
+    setEditingTeacher(null); // Clear editing teacher on close
+  };
+
+  const handleFormSaveSuccess = () => {
+    fetchTeachers();    // Re-fetch teachers from the server
+    closeFormModal();   // Close the form modal
   };
 
   useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) { // Ensure totalPages is positive
+    if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
-    } else if (totalPages === 0 && filteredTeachers.length === 0) { // If no results, reset to page 1
+    } else if (totalPages === 0 && filteredTeachers.length === 0 && currentPage !== 1) {
         setCurrentPage(1);
     }
   }, [currentPage, totalPages, filteredTeachers.length]);
 
 
-  if (loading && teachers.length === 0) {
+  if (loading && teachers.length === 0) { // Show full page loader only on initial load
     return (
       <div className="flex justify-center items-center h-screen bg-gray-100">
         <div className="text-gray-600 text-lg font-semibold animate-pulse">Loading Teachers...</div>
@@ -245,6 +324,7 @@ const TeacherList = () => {
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
 
+        {/* Stats Cards - these should ideally not re-render if loading is just for table */}
         {!loading && (teachers.length > 0 || !error) && (
           <div className="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             <div className="bg-white p-5 rounded-xl shadow-lg">
@@ -286,8 +366,9 @@ const TeacherList = () => {
 
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Teacher Management</h1>
-          <Link
-            to="/teachers/create"
+          {/* Changed Link to button to open modal */}
+          <button
+            onClick={openAddTeacherModal}
             className="bg-blue-600 text-white py-2.5 px-5 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center text-sm font-medium shadow-md hover:shadow-lg"
           >
             <svg
@@ -305,7 +386,7 @@ const TeacherList = () => {
               ></path>
             </svg>
             Add New Teacher
-          </Link>
+          </button>
         </div>
 
         {error && (
@@ -359,18 +440,19 @@ const TeacherList = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {loading && paginatedTeachers.length === 0 && !error ? ( // Show loading only if not an error state
+                {/* Initial table loading state */}
+                {loading && paginatedTeachers.length === 0 && !error && teachers.length === 0 ? ( 
                   <tr>
                     <td colSpan="7" className="px-6 py-10 text-center text-sm text-gray-500">
                       Loading teachers data...
                     </td>
                   </tr>
-                ) : !loading && paginatedTeachers.length > 0 ? (
+                ) : !loading && paginatedTeachers.length > 0 ? ( // Data loaded and available
                   paginatedTeachers.map((teacher) => (
                     <tr
                       key={teacher.id}
                       className="hover:bg-gray-100 transition duration-150 cursor-pointer"
-                      onClick={() => handleRowClick(teacher)}
+                      onClick={() => handleRowClick(teacher)} // Opens Detail Modal
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         <div className="flex items-center space-x-3">
@@ -386,36 +468,29 @@ const TeacherList = () => {
                           <span>{teacher.name}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{teacher.email}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{teacher.phone}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{teacher.email || 'N/A'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{teacher.phone || 'N/A'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{teacher.shift || 'N/A'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-center">{teacher.max_hours}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-center">{teacher.max_hours || 'N/A'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {teacher.subjects && Array.isArray(teacher.subjects) && teacher.subjects.length > 0
                           ? teacher.subjects.map((s) => s && s.name).filter(Boolean).join(', ')
                           : <span className="text-gray-400 italic">None</span>}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Link
-                          to={`/teachers/edit/${teacher.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-indigo-600 hover:text-indigo-800 hover:underline mr-4 transition duration-150"
+                        <button // Changed Link to button
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent row click
+                            openEditTeacherModal(teacher); // Opens Form Modal for editing
+                          }}
+                          className="text-indigo-600 hover:text-indigo-800 hover:underline transition duration-150"
                         >
                           Edit
-                        </Link>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(teacher.id);
-                          }}
-                          className="text-red-600 hover:text-red-800 hover:underline transition duration-150"
-                        >
-                          Delete
                         </button>
                       </td>
                     </tr>
                   ))
-                ) : (
+                ) : ( // No data or error
                   <tr>
                     <td colSpan="7" className="px-6 py-10 text-center text-sm text-gray-500">
                       {error ? 'Error: ' + error : (searchTerm && filteredTeachers.length === 0 ? 'No teachers match your search.' : 'No teachers found. Try adding some!')}
@@ -435,10 +510,12 @@ const TeacherList = () => {
                 <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                     aria-label="Previous page"
                 >
-                    
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                  </svg>
                 </button>
                 <span className="px-3 py-1 border border-blue-500 bg-blue-500 text-white rounded-md text-sm font-semibold shadow-sm">
                     {currentPage}
@@ -446,17 +523,38 @@ const TeacherList = () => {
                 <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages || totalPages === 0}
-                    className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                     aria-label="Next page"
                 >
-                    
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
                 </button>
                 </div>
             </div>
           )}
         </div>
       </div>
-      {isModalOpen && <TeacherDetailModal teacher={selectedTeacher} onClose={closeModal} />}
+
+      {/* Detail Modal */}
+      {isDetailModalOpen && (
+        <TeacherDetailModal
+          teacher={selectedTeacherDetail}
+          onClose={closeDetailModal}
+          onDelete={handleDelete}
+          onEdit={openEditTeacherModal} // Pass openEditTeacherModal to TeacherDetailModal
+        />
+      )}
+
+      {/* Form Modal (for Add/Edit) */}
+      {isFormModalOpen && (
+        <TeacherFormModal
+          isOpen={isFormModalOpen}
+          onClose={closeFormModal}
+          teacherToEdit={editingTeacher}
+          onSaveSuccess={handleFormSaveSuccess}
+        />
+      )}
     </div>
   );
 };
