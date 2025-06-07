@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom'; // Link might still be used for other things
 import axios from 'axios';
 import TeacherFormModal from './TeacherFormModal'; // Adjust path if necessary
 
-// TeacherDetailModal Component (as you provided)
-
-const TeacherDetailModal = ({ teacher, onClose, onDelete, onEdit }) => { // Added onEdit prop
+// TeacherDetailModal Component (as provided - assumed unchanged)
+const TeacherDetailModal = ({ teacher, onClose, onDelete, onEdit }) => {
   const modalRef = useRef();
   useEffect(() => {
     const handleEsc = (event) => {
@@ -19,33 +17,16 @@ const TeacherDetailModal = ({ teacher, onClose, onDelete, onEdit }) => { // Adde
     };
   }, [onClose]);
   if (!teacher) return null;
-  
+
   const defaultImageUrl = 'https://i.ibb.co/qY3TgFny/307ce493-b254-4b2d-8ba4-d12c080d6651.jpg';
-  
+
   const handleDeleteClick = () => {
     onDelete(teacher.id);
   };
-  
-  const handleEditClick = () => {
-    onEdit(teacher); // Pass the teacher to the onEdit handler
-  };
-  
-  
-  // Effect for closing modal with ESC key
-  
 
-  // Effect for click outside to close (Optional, can conflict if other modals are layered)
-  // useEffect(() => {
-  //   const handleClickOutside = (event) => {
-  //     if (modalRef.current && !modalRef.current.contains(event.target)) {
-  //       onClose();
-  //     }
-  //   };
-  //   document.addEventListener('mousedown', handleClickOutside);
-  //   return () => {
-  //     document.removeEventListener('mousedown', handleClickOutside);
-  //   };
-  // }, [onClose]);
+  const handleEditClick = () => {
+    onEdit(teacher);
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4 transition-opacity duration-300 ease-in-out">
@@ -106,7 +87,7 @@ const TeacherDetailModal = ({ teacher, onClose, onDelete, onEdit }) => { // Adde
         </div>
 
         <div className="mt-8 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
-           <button // Changed Link to button for consistency with modal pattern
+           <button
             onClick={handleEditClick}
             className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 transition duration-150 shadow-sm text-center"
           >
@@ -149,21 +130,17 @@ const TeacherList = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // For Detail Modal
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState(null); // New state for subject filter
+
   const [selectedTeacherDetail, setSelectedTeacherDetail] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  // For Form Modal (Add/Edit)
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [editingTeacher, setEditingTeacher] = useState(null); // null for Add, teacher object for Edit
+  const [editingTeacher, setEditingTeacher] = useState(null);
 
   const defaultImageUrl = 'https://i.ibb.co/qY3TgFny/307ce493-b254-4b2d-8ba4-d12c080d6651.jpg';
 
   const fetchTeachers = async () => {
-    // Keep setLoading(true) at the beginning of the actual fetch operation
-    // For refreshes, you might want a different loading indicator or none
-    // For now, let's keep it simple for initial load
-    // setLoading(true); // This can cause a full page loader on every refresh
     setError(null);
     try {
       const response = await axios.get('/teachers');
@@ -173,30 +150,24 @@ const TeacherList = () => {
       setError('Failed to fetch teachers. Please check the API endpoint or network connection.');
       setTeachers([]);
     } finally {
-      if(loading) setLoading(false); // Only set loading to false on initial load
+      if(loading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    setLoading(true); // Set loading true for the initial fetch
+    setLoading(true);
     fetchTeachers();
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this teacher? This action cannot be undone.')) {
       try {
         await axios.delete(`/teachers/${id}`);
-        // Instead of filtering, re-fetch to get the most up-to-date list
-        // and handle pagination adjustments correctly based on server state.
-        fetchTeachers(); // Re-fetch teachers
+        fetchTeachers(); 
 
-        // Close detail modal if the deleted teacher was shown there
         if (selectedTeacherDetail && selectedTeacherDetail.id === id) {
           closeDetailModal();
         }
-        // No need to manually adjust currentPage if re-fetching, 
-        // but you might want to if you prefer client-side filtering after delete for speed.
-        // For simplicity, re-fetching is more robust.
       } catch (err) {
         console.error("Delete Error:", err);
         setError(`Failed to delete teacher. ${err.response?.data?.message || err.message}`);
@@ -204,17 +175,30 @@ const TeacherList = () => {
     }
   };
 
-
+  // UPDATED filteredTeachers to include subject filter
   const filteredTeachers = useMemo(() => {
-    if (!searchTerm) {
-      return teachers;
+    let tempTeachers = teachers;
+
+    // Apply search term filter
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      tempTeachers = tempTeachers.filter(teacher =>
+        (teacher.name && teacher.name.toLowerCase().includes(lowerSearchTerm)) ||
+        (teacher.email && teacher.email.toLowerCase().includes(lowerSearchTerm)) ||
+        (teacher.phone && teacher.phone.toLowerCase().includes(lowerSearchTerm))
+      );
     }
-    return teachers.filter(teacher =>
-      (teacher.name && teacher.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (teacher.email && teacher.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (teacher.phone && teacher.phone.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [teachers, searchTerm]);
+
+    // Apply subject filter
+    if (selectedSubjectFilter) {
+      tempTeachers = tempTeachers.filter(teacher =>
+        teacher.subjects &&
+        Array.isArray(teacher.subjects) &&
+        teacher.subjects.some(subject => subject && subject.name === selectedSubjectFilter)
+      );
+    }
+    return tempTeachers;
+  }, [teachers, searchTerm, selectedSubjectFilter]);
 
   const paginatedTeachers = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -225,8 +209,8 @@ const TeacherList = () => {
     return Math.max(1, Math.ceil(filteredTeachers.length / itemsPerPage));
   }, [filteredTeachers, itemsPerPage]);
 
+  const totalTeachers = useMemo(() => teachers.length, [teachers]); // Overall total
 
-  const totalTeachers = useMemo(() => teachers.length, [teachers]);
   const shiftCounts = useMemo(() => {
     if (!teachers || teachers.length === 0) return {};
     return teachers.reduce((acc, teacher) => {
@@ -247,7 +231,13 @@ const TeacherList = () => {
         });
       }
     });
-    return counts;
+    // Sort subjects by name for consistent display
+    return Object.entries(counts)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .reduce((obj, [key, value]) => {
+        obj[key] = value;
+        return obj;
+      }, {});
   }, [teachers]);
 
   const handleSearchChange = (event) => {
@@ -266,7 +256,17 @@ const TeacherList = () => {
     }
   };
 
-  // --- Detail Modal ---
+  // NEW: Handler for subject filter clicks
+  const handleSubjectFilterClick = (subjectName) => {
+    setSelectedSubjectFilter(prevFilter => {
+      if (prevFilter === subjectName) {
+        return null; // Toggle off if already selected
+      }
+      return subjectName; // Select the new subject
+    });
+    setCurrentPage(1); // Reset to first page on filter change
+  };
+
   const handleRowClick = (teacher) => {
     setSelectedTeacherDetail(teacher);
     setIsDetailModalOpen(true);
@@ -277,26 +277,25 @@ const TeacherList = () => {
     setSelectedTeacherDetail(null);
   };
 
-  // --- Form Modal (Add/Edit) ---
   const openAddTeacherModal = () => {
-    setEditingTeacher(null); // Clear any previous editing teacher
+    setEditingTeacher(null);
     setIsFormModalOpen(true);
   };
 
   const openEditTeacherModal = (teacher) => {
     setEditingTeacher(teacher);
     setIsFormModalOpen(true);
-    if(isDetailModalOpen) setIsDetailModalOpen(false); // Close detail modal if opening edit from there
+    if(isDetailModalOpen) setIsDetailModalOpen(false);
   };
 
   const closeFormModal = () => {
     setIsFormModalOpen(false);
-    setEditingTeacher(null); // Clear editing teacher on close
+    setEditingTeacher(null);
   };
 
   const handleFormSaveSuccess = () => {
-    fetchTeachers();    // Re-fetch teachers from the server
-    closeFormModal();   // Close the form modal
+    fetchTeachers();
+    closeFormModal();
   };
 
   useEffect(() => {
@@ -307,8 +306,7 @@ const TeacherList = () => {
     }
   }, [currentPage, totalPages, filteredTeachers.length]);
 
-
-  if (loading && teachers.length === 0) { // Show full page loader only on initial load
+  if (loading && teachers.length === 0) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-100">
         <div className="text-gray-600 text-lg font-semibold animate-pulse">Loading Teachers...</div>
@@ -319,46 +317,71 @@ const TeacherList = () => {
   const firstEntryIndex = filteredTeachers.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
   const lastEntryIndex = Math.min(currentPage * itemsPerPage, filteredTeachers.length);
 
-
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
 
-        {/* Stats Cards - these should ideally not re-render if loading is just for table */}
         {!loading && (teachers.length > 0 || !error) && (
-          <div className="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="bg-white p-5 rounded-xl shadow-lg">
               <p className="text-4xl font-bold text-blue-600">{totalTeachers}</p>
               <p className="mt-1 text-sm font-medium text-gray-500 uppercase tracking-wider">Total Teachers</p>
-            </div>
-            <div className="bg-white p-5 rounded-xl shadow-lg">
-              <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Teachers by Shift</p>
-              {Object.entries(shiftCounts).length > 0 ? (
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                {Object.entries(shiftCounts).map(([shift, count]) => (
-                  <div key={shift} className="flex items-center justify-between">
-                    <p className="text-gray-700 text-base">{shift}</p>
-                    <p className="text-2xl font-semibold text-green-600">{count}</p>
+              
+              {Object.entries(shiftCounts).length > 0 && (
+                <div className="mt-4 pt-3 border-t border-gray-200">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">By Shift:</p>
+                  <div className="space-y-1 max-h-24 overflow-y-auto">
+                    {Object.entries(shiftCounts).map(([shift, count]) => (
+                      <div key={shift} className="flex items-center justify-between text-sm">
+                        <p className="text-gray-600">{shift}</p>
+                        <p className="font-semibold text-blue-500">{count}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
                 </div>
-              ) : (
-                <p className="text-gray-700 text-base">No shift data available.</p>
               )}
+               {Object.entries(shiftCounts).length === 0 && totalTeachers > 0 && (
+                 <p className="mt-3 pt-3 border-t border-gray-200 text-sm text-gray-500 italic">No shift data assigned.</p>
+               )}
             </div>
-            <div className="bg-white p-5 rounded-xl shadow-lg md:col-span-2 lg:col-span-1">
-              <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Teachers by Subject</p>
+
+            {/* UPDATED "Teachers by Subject" card with clickable filter blocks */}
+            <div className="bg-white p-5 rounded-xl shadow-lg">
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">
+                  Filter by Subject
+                </p>
+                {selectedSubjectFilter && (
+                  <button
+                    onClick={() => handleSubjectFilterClick(selectedSubjectFilter)} // Click to clear
+                    className="text-xs text-red-500 hover:text-red-700 font-medium"
+                  >
+                    Clear Filter
+                  </button>
+                )}
+              </div>
               {Object.entries(subjectCounts).length > 0 ? (
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                {Object.entries(subjectCounts).map(([subject, count]) => (
-                  <div key={subject} className="flex items-center justify-between">
-                    <p className="text-gray-700 text-base truncate pr-2" title={subject}>{subject}</p>
-                    <p className="text-2xl font-semibold text-purple-600">{count}</p>
-                  </div>
-                ))}
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                  {Object.entries(subjectCounts).map(([subject, count]) => (
+                    <button
+                      key={subject}
+                      onClick={() => handleSubjectFilterClick(subject)}
+                      title={`Filter by ${subject} (${count} teachers)`}
+                      className={`
+                        px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150
+                        focus:outline-none focus:ring-2 focus:ring-offset-1
+                        ${selectedSubjectFilter === subject 
+                          ? 'bg-purple-600 text-white shadow-md ring-purple-500' 
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300 ring-gray-300'
+                        }
+                      `}
+                    >
+                      {subject} <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${selectedSubjectFilter === subject ? 'bg-purple-400' : 'bg-gray-300'}`}>{count}</span>
+                    </button>
+                  ))}
                 </div>
               ) : (
-                <p className="text-gray-700 text-base">No subject data available.</p>
+                <p className="text-gray-700 text-sm">No subject data available to filter.</p>
               )}
             </div>
           </div>
@@ -366,7 +389,6 @@ const TeacherList = () => {
 
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Teacher Management</h1>
-          {/* Changed Link to button to open modal */}
           <button
             onClick={openAddTeacherModal}
             className="bg-blue-600 text-white py-2.5 px-5 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center text-sm font-medium shadow-md hover:shadow-lg"
@@ -440,19 +462,18 @@ const TeacherList = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {/* Initial table loading state */}
                 {loading && paginatedTeachers.length === 0 && !error && teachers.length === 0 ? ( 
                   <tr>
                     <td colSpan="7" className="px-6 py-10 text-center text-sm text-gray-500">
                       Loading teachers data...
                     </td>
                   </tr>
-                ) : !loading && paginatedTeachers.length > 0 ? ( // Data loaded and available
+                ) : !loading && paginatedTeachers.length > 0 ? (
                   paginatedTeachers.map((teacher) => (
                     <tr
                       key={teacher.id}
                       className="hover:bg-gray-100 transition duration-150 cursor-pointer"
-                      onClick={() => handleRowClick(teacher)} // Opens Detail Modal
+                      onClick={() => handleRowClick(teacher)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         <div className="flex items-center space-x-3">
@@ -478,10 +499,10 @@ const TeacherList = () => {
                           : <span className="text-gray-400 italic">None</span>}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button // Changed Link to button
+                        <button
                           onClick={(e) => {
-                            e.stopPropagation(); // Prevent row click
-                            openEditTeacherModal(teacher); // Opens Form Modal for editing
+                            e.stopPropagation();
+                            openEditTeacherModal(teacher);
                           }}
                           className="text-indigo-600 hover:text-indigo-800 hover:underline transition duration-150"
                         >
@@ -490,10 +511,14 @@ const TeacherList = () => {
                       </td>
                     </tr>
                   ))
-                ) : ( // No data or error
+                ) : (
                   <tr>
                     <td colSpan="7" className="px-6 py-10 text-center text-sm text-gray-500">
-                      {error ? 'Error: ' + error : (searchTerm && filteredTeachers.length === 0 ? 'No teachers match your search.' : 'No teachers found. Try adding some!')}
+                      {error 
+                        ? 'Error: ' + error 
+                        : (searchTerm || selectedSubjectFilter) && filteredTeachers.length === 0 
+                          ? 'No teachers match your search or filter criteria.' 
+                          : 'No teachers found. Try adding some!'}
                     </td>
                   </tr>
                 )}
@@ -505,6 +530,7 @@ const TeacherList = () => {
              <div className="p-4 flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0 border-t border-gray-200">
                 <div className="text-sm text-gray-600">
                 Showing {firstEntryIndex} to {lastEntryIndex} of {filteredTeachers.length} entries
+                {selectedSubjectFilter && <span className="ml-1 font-semibold">(filtered by "{selectedSubjectFilter}")</span>}
                 </div>
                 <div className="flex items-center space-x-1">
                 <button
@@ -536,17 +562,15 @@ const TeacherList = () => {
         </div>
       </div>
 
-      {/* Detail Modal */}
       {isDetailModalOpen && (
         <TeacherDetailModal
           teacher={selectedTeacherDetail}
           onClose={closeDetailModal}
           onDelete={handleDelete}
-          onEdit={openEditTeacherModal} // Pass openEditTeacherModal to TeacherDetailModal
+          onEdit={openEditTeacherModal}
         />
       )}
 
-      {/* Form Modal (for Add/Edit) */}
       {isFormModalOpen && (
         <TeacherFormModal
           isOpen={isFormModalOpen}
