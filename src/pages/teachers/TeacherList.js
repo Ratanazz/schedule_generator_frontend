@@ -1,125 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import TeacherFormModal from './TeacherFormModal'; // Adjust path if necessary
-
-// TeacherDetailModal Component (as provided - assumed unchanged)
-const TeacherDetailModal = ({ teacher, onClose, onDelete, onEdit }) => {
-  const modalRef = useRef();
-  useEffect(() => {
-    const handleEsc = (event) => {
-      if (event.keyCode === 27) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => {
-      window.removeEventListener('keydown', handleEsc);
-    };
-  }, [onClose]);
-  if (!teacher) return null;
-
-  const defaultImageUrl = 'https://i.ibb.co/qY3TgFny/307ce493-b254-4b2d-8ba4-d12c080d6651.jpg';
-
-  const handleDeleteClick = () => {
-    onDelete(teacher.id);
-  };
-
-  const handleEditClick = () => {
-    onEdit(teacher);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4 transition-opacity duration-300 ease-in-out">
-      <div ref={modalRef} className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl max-w-lg w-full transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-modalShow">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Teacher Details</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
-            aria-label="Close modal"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center sm:items-start mb-6">
-          <img
-            src={teacher.image_url || defaultImageUrl}
-            alt={`${teacher.name}'s profile`}
-            className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover mb-4 sm:mb-0 sm:mr-6 shadow-md border-2 border-blue-200"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = defaultImageUrl;
-            }}
-          />
-          <div className="text-center sm:text-left">
-            <h3 className="text-xl font-semibold text-gray-900">{teacher.name}</h3>
-            <p className="text-sm text-gray-600">{teacher.email}</p>
-            <p className="text-sm text-gray-600">{teacher.phone}</p>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex justify-between py-2 border-b border-gray-200">
-            <span className="font-medium text-gray-600">Shift:</span>
-            <span className="text-gray-800">{teacher.shift || 'N/A'}</span>
-          </div>
-          <div className="flex justify-between py-2 border-b border-gray-200">
-            <span className="font-medium text-gray-600">Max Weekly Hours:</span>
-            <span className="text-gray-800">{teacher.max_hours || 'N/A'}</span>
-          </div>
-          <div className="py-2">
-            <span className="font-medium text-gray-600">Subjects:</span>
-            {teacher.subjects && Array.isArray(teacher.subjects) && teacher.subjects.length > 0 ? (
-              <ul className="list-disc list-inside ml-1 mt-1 space-y-1">
-                {teacher.subjects.map((s, index) => (
-                  <li key={s?.id || index} className="text-gray-800">
-                    {s && s.name ? s.name : 'Unnamed Subject'}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-800 italic ml-1 mt-1">No subjects assigned.</p>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-8 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
-           <button
-            onClick={handleEditClick}
-            className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 transition duration-150 shadow-sm text-center"
-          >
-            Edit Teacher
-          </button>
-          <button
-            onClick={handleDeleteClick}
-            className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition duration-150 shadow-sm"
-          >
-            Delete Teacher
-          </button>
-          <button
-            onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-300 transition duration-150 shadow-sm"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-      <style jsx global>{`
-        @keyframes modalShow {
-          0% { transform: scale(0.95); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        .animate-modalShow {
-          animation: modalShow 0.3s forwards;
-        }
-      `}</style>
-    </div>
-  );
-};
-
+import TeacherDetailModal from './TeacherDetailModal'; // Adjust path if necessary
 
 const TeacherList = () => {
   const [teachers, setTeachers] = useState([]);
@@ -130,7 +12,7 @@ const TeacherList = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState(null); // New state for subject filter
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState(null);
 
   const [selectedTeacherDetail, setSelectedTeacherDetail] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -142,11 +24,17 @@ const TeacherList = () => {
 
   const fetchTeachers = async () => {
     setError(null);
+    // setLoading(true); // setLoading is handled by initial state or useEffect
     try {
-      const response = await axios.get('/teachers');
+      const response = await axios.get('/teachers'); // Replace with your actual API endpoint
+      console.log("API Response (/teachers):", response.data);
       setTeachers(response.data);
     } catch (err) {
-      console.error("API Error:", err);
+      console.error("API Error fetching teachers:", err);
+      if (err.response) {
+        console.error("API Error - Status:", err.response.status);
+        console.error("API Error - Data:", err.response.data);
+      }
       setError('Failed to fetch teachers. Please check the API endpoint or network connection.');
       setTeachers([]);
     } finally {
@@ -162,7 +50,7 @@ const TeacherList = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this teacher? This action cannot be undone.')) {
       try {
-        await axios.delete(`/teachers/${id}`);
+        await axios.delete(`/teachers/${id}`); // Replace with your actual API endpoint
         fetchTeachers(); 
 
         if (selectedTeacherDetail && selectedTeacherDetail.id === id) {
@@ -175,21 +63,18 @@ const TeacherList = () => {
     }
   };
 
-  // UPDATED filteredTeachers to include subject filter
   const filteredTeachers = useMemo(() => {
     let tempTeachers = teachers;
 
-    // Apply search term filter
     if (searchTerm) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       tempTeachers = tempTeachers.filter(teacher =>
         (teacher.name && teacher.name.toLowerCase().includes(lowerSearchTerm)) ||
-        (teacher.email && teacher.email.toLowerCase().includes(lowerSearchTerm)) ||
         (teacher.phone && teacher.phone.toLowerCase().includes(lowerSearchTerm))
+        // Add other searchable fields if needed
       );
     }
 
-    // Apply subject filter
     if (selectedSubjectFilter) {
       tempTeachers = tempTeachers.filter(teacher =>
         teacher.subjects &&
@@ -209,7 +94,7 @@ const TeacherList = () => {
     return Math.max(1, Math.ceil(filteredTeachers.length / itemsPerPage));
   }, [filteredTeachers, itemsPerPage]);
 
-  const totalTeachers = useMemo(() => teachers.length, [teachers]); // Overall total
+  const totalTeachers = useMemo(() => teachers.length, [teachers]);
 
   const shiftCounts = useMemo(() => {
     if (!teachers || teachers.length === 0) return {};
@@ -226,12 +111,12 @@ const TeacherList = () => {
     teachers.forEach(teacher => {
       if (teacher.subjects && Array.isArray(teacher.subjects) && teacher.subjects.length > 0) {
         teacher.subjects.forEach(subject => {
+          // Ensure subject and subject.name exist before accessing
           const subjectName = subject && subject.name ? subject.name : 'Unnamed Subject';
           counts[subjectName] = (counts[subjectName] || 0) + 1;
         });
       }
     });
-    // Sort subjects by name for consistent display
     return Object.entries(counts)
       .sort(([a], [b]) => a.localeCompare(b))
       .reduce((obj, [key, value]) => {
@@ -256,15 +141,14 @@ const TeacherList = () => {
     }
   };
 
-  // NEW: Handler for subject filter clicks
   const handleSubjectFilterClick = (subjectName) => {
     setSelectedSubjectFilter(prevFilter => {
       if (prevFilter === subjectName) {
-        return null; // Toggle off if already selected
+        return null;
       }
-      return subjectName; // Select the new subject
+      return subjectName;
     });
-    setCurrentPage(1); // Reset to first page on filter change
+    setCurrentPage(1);
   };
 
   const handleRowClick = (teacher) => {
@@ -285,7 +169,7 @@ const TeacherList = () => {
   const openEditTeacherModal = (teacher) => {
     setEditingTeacher(teacher);
     setIsFormModalOpen(true);
-    if(isDetailModalOpen) setIsDetailModalOpen(false);
+    if(isDetailModalOpen) setIsDetailModalOpen(false); // Close detail modal if open
   };
 
   const closeFormModal = () => {
@@ -345,7 +229,6 @@ const TeacherList = () => {
                )}
             </div>
 
-            {/* UPDATED "Teachers by Subject" card with clickable filter blocks */}
             <div className="bg-white p-5 rounded-xl shadow-lg">
               <div className="flex justify-between items-center mb-3">
                 <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">
@@ -453,8 +336,8 @@ const TeacherList = () => {
               <thead className="bg-gray-100">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grades</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max Hours</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subjects</th>
@@ -489,19 +372,23 @@ const TeacherList = () => {
                           <span>{teacher.name}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{teacher.email || 'N/A'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{teacher.phone || 'N/A'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {teacher.grades && Array.isArray(teacher.grades) && teacher.grades.length > 0
+                          ? teacher.grades.map(grade => grade.name).join(', ')
+                          : <span className="text-gray-400 italic">N/A</span>}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{teacher.shift || 'N/A'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-center">{teacher.max_hours || 'N/A'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {teacher.subjects && Array.isArray(teacher.subjects) && teacher.subjects.length > 0
                           ? teacher.subjects.map((s) => s && s.name).filter(Boolean).join(', ')
-                          : <span className="text-gray-400 italic">None</span>}
+                          : <span className="text-gray-400 italic">N/A</span>}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={(e) => {
-                            e.stopPropagation();
+                            e.stopPropagation(); // Prevent row click when clicking edit
                             openEditTeacherModal(teacher);
                           }}
                           className="text-indigo-600 hover:text-indigo-800 hover:underline transition duration-150"
