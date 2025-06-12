@@ -4,13 +4,14 @@ import { Toaster } from 'sonner';
 import { TooltipProvider } from './components/ui/tooltip';
 import Dashboard from './pages/Dashboard';
 import TeacherList from './pages/teachers/TeacherList';
-
+import SubjectDetail from './pages/subjects/SubjectDetail';
 import SubjectList from './pages/subjects/SubjectList';
 import SubjectForm from './pages/subjects/SubjectForm';
 import GradeclassList from './pages/gradeclass/GradeclassList';
 import GradeclassForm from './pages/gradeclass/GradeclassForm';
 import GradeList from './pages/grades/GradeList';
 import GradeForm from './pages/grades/GradeForm';
+import ScheduleGenerationSetup from './pages/schedules/ScheduleGenerationSetup';
 import ScheduleList from './pages/schedules/ScheduleList';
 import ScheduleForm from './pages/schedules/ScheduleForm';
 import ScheduleView from './pages/schedules/ScheduleView';
@@ -51,6 +52,7 @@ const AppContent = () => {
           <Route path="/subjects" element={<ProtectedRoute><SubjectList /></ProtectedRoute>} />
           <Route path="/subjects/create" element={<ProtectedRoute><SubjectForm /></ProtectedRoute>} />
           <Route path="/subjects/edit/:id" element={<ProtectedRoute><SubjectForm /></ProtectedRoute>} />
+          <Route path="/subjects/details" element={<ProtectedRoute><SubjectDetail /></ProtectedRoute>} />
 
           {/* Grade Routes */}
           <Route path="/grades" element={<ProtectedRoute><GradeList /></ProtectedRoute>} />
@@ -68,6 +70,7 @@ const AppContent = () => {
           <Route path="/schedules/edit/:id" element={<ProtectedRoute><ScheduleForm /></ProtectedRoute>} />
           <Route path="/schedules/view/:id" element={<ProtectedRoute><ScheduleView /></ProtectedRoute>} />
           <Route path="/schedules/generate/:id" element={<ProtectedRoute><ScheduleGenerate /></ProtectedRoute>} />
+          <Route path="/schedules/generate-setup" element={<ProtectedRoute><ScheduleGenerationSetup /></ProtectedRoute>} />
         </Routes>
       </main>
 
