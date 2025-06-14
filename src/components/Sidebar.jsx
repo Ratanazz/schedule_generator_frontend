@@ -11,6 +11,7 @@ import {
   FaTimes,
   FaBars,
   FaHome,
+  FaUserGraduate,
   FaUserCircle
 } from 'react-icons/fa';
 
@@ -84,6 +85,7 @@ const Sidebar = () => {
             { to: "/subjects", icon: FaBook, label: "Subjects" },
             { to: "/grades", icon: FaGraduationCap, label: "Grades" },
             { to: "/classes", icon: FaSchool, label: "Classes" },
+            { to: "/students", icon: FaUserGraduate, label: "Student" },
             { to: "/schedules", icon: FaCalendarAlt, label: "Schedules" },
           ].map((item) => (
             <NavLink key={item.to} to={item.to} className={navLinkClasses}>

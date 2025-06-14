@@ -11,6 +11,7 @@ import GradeclassList from './pages/gradeclass/GradeclassList';
 import GradeclassForm from './pages/gradeclass/GradeclassForm';
 import GradeList from './pages/grades/GradeList';
 import GradeForm from './pages/grades/GradeForm';
+import StudentsPage from './pages/student/StudentsPage';
 import ScheduleGenerationSetup from './pages/schedules/ScheduleGenerationSetup';
 import ScheduleList from './pages/schedules/ScheduleList';
 import ScheduleForm from './pages/schedules/ScheduleForm';
@@ -22,6 +23,7 @@ import Sidebar from './components/Sidebar';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import './App.css';
+
 
 const AppContent = () => {
   const location = useLocation();
@@ -63,6 +65,8 @@ const AppContent = () => {
           <Route path="/classes" element={<ProtectedRoute><GradeclassList /></ProtectedRoute>} />
           <Route path="/classes/create" element={<ProtectedRoute><GradeclassForm /></ProtectedRoute>} />
           <Route path="/classes/edit/:id" element={<ProtectedRoute><GradeclassForm /></ProtectedRoute>} />
+           {/* Student Routes */}
+          <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
 
           {/* Schedule Routes */}
           <Route path="/schedules" element={<ProtectedRoute><ScheduleList /></ProtectedRoute>} />
