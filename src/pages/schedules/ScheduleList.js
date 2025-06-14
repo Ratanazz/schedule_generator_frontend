@@ -1,11 +1,14 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable'; // Corrected import
 
-const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-// FIX 1: Change academic year options to single years
+// Define the order of days for the table columns (lowercase for keys, used in useMemo)
+const tableDisplayDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 const academicYearOptions = Array.from({ length: 7 }, (_, i) => `${2024 + i}`);
 const shiftOptions = ["Morning", "Afternoon"];
+
 
 const ScheduleList = () => {
   const [classes, setClasses] = useState([]);
@@ -13,7 +16,7 @@ const ScheduleList = () => {
   const [schedule, setSchedule] = useState(null);
   const [loadingClasses, setLoadingClasses] = useState(false);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
-  const [fetchClassesError, setFetchClassesError] = useState(''); // Specific error for fetching classes
+  const [fetchClassesError, setFetchClassesError] = useState('');
   const [fetchScheduleError, setFetchScheduleError] = useState('');
 
   const [isDeleting, setIsDeleting] = useState(false);
@@ -31,11 +34,10 @@ const ScheduleList = () => {
   const fetchGradesForFilter = useCallback(async () => {
     setLoadingFilters(true);
     try {
-      const res = await axios.get('/grades'); // Ensure this endpoint is correct
+      const res = await axios.get('/grades');
       setGrades(res.data || []);
     } catch (err) {
       console.error('Error fetching grades for filter:', err);
-      // Optionally set an error state for grades fetching
     }
     setLoadingFilters(false);
   }, []);
@@ -44,13 +46,12 @@ const ScheduleList = () => {
     fetchGradesForFilter();
   }, [fetchGradesForFilter]);
 
-  // FIX 2: Correct fetchClasses to make an API call
   const fetchClasses = useCallback(async () => {
     setLoadingClasses(true);
     setClasses([]);
     setSelectedClassData(null);
     setSchedule(null);
-    setFetchClassesError(''); // Clear previous class fetching errors
+    setFetchClassesError('');
     setFetchScheduleError('');
     setDeleteError('');
     setDeleteSuccessMessage('');
@@ -61,8 +62,7 @@ const ScheduleList = () => {
     if (filterShift) queryParams.shift = filterShift;
 
     try {
-      // Actually make the API call to fetch classes with filters
-      const response = await axios.get('/gradeclasses', { params: queryParams }); // Ensure '/classes' is your correct endpoint
+      const response = await axios.get('/gradeclasses', { params: queryParams });
       setClasses(response.data || []);
       if (response.data && response.data.length === 0) {
         setFetchClassesError('No classes found matching your criteria.');
@@ -70,7 +70,7 @@ const ScheduleList = () => {
     } catch (err) {
       console.error('Error fetching classes:', err);
       setFetchClassesError(err.response?.data?.message || 'Failed to fetch classes.');
-      setClasses([]); // Ensure classes list is empty on error
+      setClasses([]);
     } finally {
       setLoadingClasses(false);
     }
@@ -88,8 +88,6 @@ const ScheduleList = () => {
     setDeleteSuccessMessage('');
     setIsDeleting(false);
 
-    // Find class info from the current 'classes' state
-    // Ensure academic_year matching is also considered if classes can have same ID but different AY
     const classInfo = classes.find(c => c.id === classIdToFetch && c.academic_year === targetAcademicYear);
     
     if (classInfo) {
@@ -98,56 +96,52 @@ const ScheduleList = () => {
             name: `${classInfo.grade?.name || ''} ${classInfo.section || ''}`.trim() || 'N/A',
             shift: classInfo.shift || 'N/A',
             classroom: classInfo.classroom || 'N/A',
-            academic_year: targetAcademicYear, // Use the targetAcademicYear passed
+            academic_year: targetAcademicYear,
         });
     } else {
-        // Fallback if classInfo not found (e.g., if directly called or state mismatch)
-        // Set basic info based on what's passed.
         setSelectedClassData({
             id: classIdToFetch,
-            name: 'Loading...', // Will be updated by schedule response
-            shift: 'Loading...', // Will be updated
-            classroom: 'Loading...', // Will be updated
+            name: 'Loading...',
+            shift: 'Loading...',
+            classroom: 'Loading...',
             academic_year: targetAcademicYear,
         });
     }
 
     try {
-      // Ensure targetAcademicYear is always provided. If it might be undefined, handle that.
       const url = `/schedules/class/${classIdToFetch}?academic_year=${targetAcademicYear}`;
       const res = await axios.get(url);
 
       if (res.data && res.data.schedule && Object.keys(res.data.schedule).length > 0) {
-        setSchedule(res.data.schedule);
+        setSchedule(res.data.schedule); 
         setSelectedClassData(prev => ({
-          ...prev, // Keep ID, etc. from classInfo if set
-          id: classIdToFetch, // ensure id is set
+          ...prev,
+          id: classIdToFetch,
           name: res.data.class_name || prev?.name || 'N/A',
           shift: res.data.shift || prev?.shift || 'N/A',
           classroom: res.data.classroom || prev?.classroom || 'N/A',
-          academic_year: res.data.academic_year, // This should be the definitive academic year for the schedule
+          academic_year: res.data.academic_year,
         }));
       } else {
         setFetchScheduleError(res.data?.message || `Schedule data not found for this class for the academic year ${targetAcademicYear}.`);
-        setSchedule({}); // Set to empty object for "no schedule data"
+        setSchedule({}); 
         setSelectedClassData(prev => ({
             ...prev,
             id: classIdToFetch,
             name: res.data.class_name || prev?.name || 'N/A',
             shift: res.data.shift || prev?.shift || 'N/A',
             classroom: res.data.classroom || prev?.classroom || 'N/A',
-            academic_year: res.data.academic_year || targetAcademicYear, // Prioritize response, then passed param
+            academic_year: res.data.academic_year || targetAcademicYear,
         }));
       }
     } catch (err) {
       console.error('Error fetching schedule:', err);
       setFetchScheduleError( err.response?.data?.message || 'Failed to fetch schedule.');
-      setSchedule(null); // Error, so no schedule
-      // Update selectedClassData to reflect the class for which the fetch failed
+      setSchedule(null);
       setSelectedClassData(prev => ({
-          ...prev, // Keep existing info like name if available from classInfo
+          ...prev,
           id: classIdToFetch,
-          academic_year: targetAcademicYear, // Keep the academic year we attempted to fetch
+          academic_year: targetAcademicYear,
       }));
     }
     setLoadingSchedule(false);
@@ -167,8 +161,6 @@ const ScheduleList = () => {
       setDeleteSuccessMessage(`Schedule for ${selectedClassData.name} (Academic Year: ${selectedClassData.academic_year}) deleted successfully.`);
       setSchedule(null); 
       setIsDeleting(false);
-      // Optionally, you might want to clear selectedClassData or re-fetch classes
-      // setSelectedClassData(null);
     } catch (err) {
       console.error('Error deleting schedule:', err);
       setDeleteError(err.response?.data?.message || 'Failed to delete schedule.');
@@ -180,11 +172,129 @@ const ScheduleList = () => {
     setter(e.target.value);
     setSelectedClassData(null);
     setSchedule(null);
-    setFetchClassesError(''); // Clear class fetching error on filter change
+    setFetchClassesError('');
     setFetchScheduleError('');
     setDeleteSuccessMessage('');
     setDeleteError('');
   };
+
+  // Prepare data for the table view
+  const { uniqueTimeSlots, scheduleTableData } = useMemo(() => {
+    if (!schedule || Object.keys(schedule).length === 0) {
+      return { uniqueTimeSlots: [], scheduleTableData: {} };
+    }
+
+    const allTimes = new Set();
+    const preparedData = {};
+
+    Object.entries(schedule).forEach(([day, slots]) => {
+      const dayKey = day.toLowerCase();
+      if (tableDisplayDays.includes(dayKey) && slots && Array.isArray(slots)) {
+        slots.forEach(slot => {
+          if (slot && slot.time) {
+            allTimes.add(slot.time);
+            if (!preparedData[slot.time]) {
+              preparedData[slot.time] = {};
+            }
+            preparedData[slot.time][dayKey] = {
+              subject: slot.subject,
+              teacher: slot.teacher,
+            };
+          }
+        });
+      }
+    });
+
+    const sortedTimes = Array.from(allTimes).sort((a, b) => {
+      const parseTime = (timeStr) => {
+          if (!timeStr || typeof timeStr !== 'string') return 99;
+          const parts = timeStr.split('-');
+          let hour = parseInt(parts[0], 10);
+          if (isNaN(hour)) return 99;
+          if (hour < 7) hour += 12;
+          return hour;
+      };
+      return parseTime(a) - parseTime(b);
+    });
+
+    return { uniqueTimeSlots: sortedTimes, scheduleTableData: preparedData };
+  }, [schedule]);
+
+
+  const handleExportToPDF = () => {
+    if (!selectedClassData || !schedule || uniqueTimeSlots.length === 0) {
+      alert("No schedule data to export.");
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape' });
+
+    // Title
+    doc.setFontSize(16);
+    doc.text(`Schedule for ${selectedClassData.name}`, 14, 15);
+    doc.setFontSize(10);
+    doc.text(
+      `Academic Year: ${selectedClassData.academic_year} | Shift: ${selectedClassData.shift} | Classroom: ${selectedClassData.classroom || 'N/A'}`,
+      14,
+      22
+    );
+
+    // Table Headers
+    const head = [[
+      'Time',
+      ...tableDisplayDays.map(day => day.charAt(0).toUpperCase() + day.slice(1)) 
+    ]];
+
+    // Table Body
+    const body = uniqueTimeSlots.map(timeSlot => {
+      const row = [timeSlot];
+      tableDisplayDays.forEach(dayKey => {
+        const slotData = scheduleTableData[timeSlot]?.[dayKey];
+        if (slotData) {
+          let cellText = slotData.subject || 'N/A';
+          if (slotData.teacher) {
+            cellText += `\n(${slotData.teacher})`; 
+          }
+          row.push(cellText);
+        } else {
+          row.push(''); 
+        }
+      });
+      return row;
+    });
+
+    autoTable(doc, { // Corrected usage of autoTable
+      head: head,
+      body: body,
+      startY: 30, 
+      theme: 'grid', 
+      styles: {
+        fontSize: 8,
+        cellPadding: 1.5,
+        overflow: 'linebreak', 
+        halign: 'center',
+        valign: 'middle',
+      },
+      headStyles: {
+        fillColor: [219, 234, 254], 
+        textColor: [30, 58, 138],   
+        fontStyle: 'bold',
+        fontSize: 9,
+        halign: 'center',
+      },
+      columnStyles: {
+        0: { cellWidth: 'auto', fontStyle: 'bold', halign: 'left' }, 
+      },
+      didDrawPage: function (data) {
+        // doc.setFontSize(10);
+        // doc.text('Page ' + doc.internal.getNumberOfPages(), data.settings.margin.left, doc.internal.pageSize.height - 10);
+      }
+    });
+
+    const fileName = `schedule_${selectedClassData.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')}_${selectedClassData.academic_year}.pdf`;
+    doc.save(fileName);
+  };
+
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto bg-gray-50 min-h-screen">
@@ -218,7 +328,6 @@ const ScheduleList = () => {
               ))}
             </select>
           </div>
-
           <div>
             <label htmlFor="filterGrade" className="block text-sm font-medium text-gray-700 mb-1">
               Grade
@@ -238,7 +347,6 @@ const ScheduleList = () => {
             {loadingFilters && <p className="text-xs text-gray-500 mt-1">Loading grades...</p>}
             {!loadingFilters && grades.length === 0 && <p className="text-xs text-red-500 mt-1">No grades found. Add grades first.</p>}
           </div>
-
           <div>
             <label htmlFor="filterShift" className="block text-sm font-medium text-gray-700 mb-1">
               Shift
@@ -271,12 +379,12 @@ const ScheduleList = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {classes.map((cls) => (
             <div
-              key={`${cls.id}-${cls.academic_year}`} // Unique key if class ID can repeat across academic years
+              key={`${cls.id}-${cls.academic_year}`}
               className={`p-4 rounded-xl shadow-md cursor-pointer transition duration-150
                 ${selectedClassData && selectedClassData.id === cls.id && selectedClassData.academic_year === cls.academic_year
                   ? 'bg-blue-200 border-2 border-blue-500 ring-2 ring-blue-300'
                   : 'bg-white hover:bg-blue-50 hover:shadow-lg'}`}
-              onClick={() => fetchSchedule(cls.id, cls.academic_year)} // Pass cls.academic_year
+              onClick={() => fetchSchedule(cls.id, cls.academic_year)}
             >
               <h3 className="text-lg font-semibold text-blue-700">
                 {cls.grade?.name || 'N/A'} {cls.section || ''}
@@ -307,17 +415,28 @@ const ScheduleList = () => {
                   <span>Academic Year: {selectedClassData.academic_year}</span>
                 </div>
               </div>
+              
               {selectedClassData.academic_year && selectedClassData.academic_year !== 'N/A' && schedule && Object.keys(schedule).length > 0 && (
-                <div className="mt-3 sm:mt-0">
+                <div className="mt-3 sm:mt-0 flex flex-col items-end sm:items-start sm:flex-row sm:space-x-3 space-y-2 sm:space-y-0">
+                  {uniqueTimeSlots.length > 0 && !isDeleting && (
+                    <button
+                      onClick={handleExportToPDF}
+                      className="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md text-sm flex items-center w-full sm:w-auto justify-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                      Export PDF
+                    </button>
+                  )}
+                  
                   {!isDeleting ? (
                   <button
                     onClick={() => {
                       setIsDeleting(true); setDeleteError(''); setDeleteSuccessMessage('');
                     }}
-                    className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md text-sm flex items-center"
+                    className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md text-sm flex items-center w-full sm:w-auto justify-center"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    Delete This Schedule
+                    Delete Schedule
                   </button>
                 ) : (
                   <div className="flex flex-col items-end space-y-2 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -340,27 +459,50 @@ const ScheduleList = () => {
             {deleteSuccessMessage && <p className="text-sm text-green-600 mb-4 p-2 bg-green-50 rounded-md">{deleteSuccessMessage}</p>}
             {fetchScheduleError && <p className="text-center text-red-600 py-4 mb-4 bg-red-50 rounded-md">{fetchScheduleError}</p>}
 
-
             {schedule && Object.keys(schedule).length === 0 && !fetchScheduleError && !deleteSuccessMessage && (
                <p className="text-center text-gray-500 py-6">No schedule data available for this class and academic year.</p>
             )}
 
-            {schedule && Object.keys(schedule).length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {daysOrder.filter(day => schedule[day] && schedule[day].length > 0).map((day) => (
-                    <div key={day} className="bg-blue-50 p-4 rounded-lg shadow border-blue-200">
-                      <h3 className="text-lg font-bold mb-3 text-blue-900 capitalize">{day}</h3>
-                      <ul className="space-y-2">
-                        {schedule[day].map((slot, i) => (
-                          <li key={i} className="p-3 bg-white rounded-md border border-gray-300">
-                            <div className="font-medium text-blue-700">{slot.time}</div>
-                            <div>{slot.subject}</div>
-                            <div className="text-xs text-gray-500">Teacher: {slot.teacher}</div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
+            {schedule && Object.keys(schedule).length > 0 && uniqueTimeSlots.length > 0 && !deleteSuccessMessage && (
+              <div className="overflow-x-auto mt-6">
+                <table className="min-w-full border-collapse border border-gray-300">
+                  <thead>
+                    <tr className="bg-blue-100">
+                      <th className="border border-gray-300 p-3 text-left text-sm font-semibold text-blue-900 sticky left-0 bg-blue-100 z-10">Time</th>
+                      {tableDisplayDays.map((day) => (
+                        <th key={day} className="border border-gray-300 p-3 text-left text-sm font-semibold text-blue-900 capitalize">
+                          {day}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uniqueTimeSlots.map((timeSlot) => (
+                      <tr key={timeSlot} className="even:bg-white odd:bg-blue-50 hover:bg-blue-100 transition-colors">
+                        <td className="border border-gray-300 p-2 text-sm text-gray-700 font-medium whitespace-nowrap sticky left-0 bg-inherit z-10">
+                          {timeSlot}
+                        </td>
+                        {tableDisplayDays.map((dayKey) => {
+                          const slotData = scheduleTableData[timeSlot]?.[dayKey];
+                          return (
+                            <td key={`${dayKey}-${timeSlot}`} className="border border-gray-300 p-2 text-sm min-w-[120px]">
+                              {slotData ? (
+                                <div>
+                                  <div className="font-semibold text-blue-700">{slotData.subject}</div>
+                                  {slotData.teacher && <div className="text-xs text-gray-500"> {slotData.teacher}</div>}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                    <h3>Subject Hour</h3>
+                    <h4> gra</h4>
               </div>
             )}
         </div>
