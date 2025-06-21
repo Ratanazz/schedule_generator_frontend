@@ -10,13 +10,12 @@ const getCurrentAcademicYearFrontend = () => {
     const currentMonth = new Date().getMonth() + 1; // 1 (Jan) - 12 (Dec)
     const currentCalendarYear = new Date().getFullYear();
     
-    if (currentMonth >= 7) { // Assuming new school/academic year starts in July
-        return String(currentCalendarYear + 1); // Academic year is designated by the year it ends in
+    if (currentMonth >= 7) { 
+        return String(currentCalendarYear + 1); 
     } else {
-        return String(currentCalendarYear); // Still in the academic year that ends in the current calendar year
+        return String(currentCalendarYear); 
     }
-    // IMPORTANT: Adjust this logic to precisely match your school's definition and backend's default.
-    // Alternative simple: return String(new Date().getFullYear()); // If academic year = calendar year
+    
 };
 
 // Generate academic year options (e.g., current year +/- 2 years)
@@ -35,7 +34,7 @@ const generateAcademicYearOptions = () => {
 };
 
 // Order of days for display in the table. Must match keys from backend response.
-const displayDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const displayDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 // const displayDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]; // If Sunday is not used
 
 // --- Component ---
@@ -63,9 +62,9 @@ const TeacherScheduleView = () => {
 
       try {
         const params = { academic_year: selectedAcademicYear };
-        const response = await axios.get('/my-schedule', { params }); // Endpoint is relative to baseURL
+        const response = await axios.get('/teacher/my-schedule', { params }); // Endpoint is relative to baseURL
         
-        console.log(`API Response (/my-schedule for ${selectedAcademicYear}):`, response.data);
+        console.log(`API Response (/teacher/my-schedule for ${selectedAcademicYear}):`, response.data);
         if (response.data && typeof response.data === 'object') {
             setTeacherSchedule(response.data);
             const hasAnySchedule = Object.values(response.data).some(daySchedule => 
@@ -125,6 +124,7 @@ const TeacherScheduleView = () => {
                     preparedData[timeRange][dayKey] = {
                         subject: slot.subject_name,
                         gradeClass: slot.gradeclass_name,
+                        classroom: slot.classroom_name,
                     };
                 }
             });
@@ -230,7 +230,9 @@ const TeacherScheduleView = () => {
                           {slotData ? (
                             <div>
                               <div className="font-semibold text-indigo-700">{slotData.subject || 'N/A'}</div>
-                              {slotData.gradeClass && <div className="text-xs text-gray-600">Class: {slotData.gradeClass}</div>}
+                              {slotData.gradeClass && <div className="text-xs text-gray-600">Grade: {slotData.gradeClass}</div>}
+                              {slotData.classroom && <div className="text-xs text-gray-500">Room: {slotData.classroom}</div>}
+                              
                             </div>
                           ) : (
                             <span className="text-gray-400">-</span>
