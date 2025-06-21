@@ -87,6 +87,7 @@ const Sidebar = () => {
             { to: "/classes", icon: FaSchool, label: "Classes" },
             { to: "/students", icon: FaUserGraduate, label: "Student" },
             { to: "/schedules", icon: FaCalendarAlt, label: "Schedules" },
+            { to: "/teacher-schedules", icon: FaCalendarAlt, label: "TeacherSchedules" },
           ].map((item) => (
             <NavLink key={item.to} to={item.to} className={navLinkClasses}>
               {({ isActive }) => (

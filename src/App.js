@@ -23,6 +23,7 @@ import Sidebar from './components/Sidebar';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import './App.css';
+import TeacherScheduleView from './pages/teacherschedules/TeacherScheduleView';
 
 
 const AppContent = () => {
@@ -67,6 +68,8 @@ const AppContent = () => {
           <Route path="/classes/edit/:id" element={<ProtectedRoute><GradeclassForm /></ProtectedRoute>} />
            {/* Student Routes */}
           <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
+          {/* Teacher Schedules */}
+          <Route path="/teacher-schedules" element={<ProtectedRoute><TeacherScheduleView /></ProtectedRoute>} />
 
           {/* Schedule Routes */}
           <Route path="/schedules" element={<ProtectedRoute><ScheduleList /></ProtectedRoute>} />
