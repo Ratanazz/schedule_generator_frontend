@@ -395,7 +395,7 @@ const TeacherList = () => {
                                 title={!teacher.email ? "Teacher email required" : "Create login account"}
                                 disabled={!teacher.email}
                             >
-                                Create Login
+                                Create Account
                             </button>
                         ) : (
                             <button
@@ -403,7 +403,7 @@ const TeacherList = () => {
                                 className="text-red-600 hover:text-red-800 hover:underline transition duration-150 py-1 px-0.5 text-xs"
                                 title="Delete login account"
                             >
-                                Delete Login
+                                Delete Account
                             </button>
                         )}
                         {/* Delete Profile button could also be placed here or inside TeacherDetailModal */}

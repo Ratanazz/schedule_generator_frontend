@@ -80,24 +80,30 @@ const Sidebar = () => {
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-          {[
-            { to: "/teachers", icon: FaChalkboardTeacher, label: "Teachers" },
-            { to: "/subjects", icon: FaBook, label: "Subjects" },
-            { to: "/grades", icon: FaGraduationCap, label: "Grades" },
-            { to: "/classes", icon: FaSchool, label: "Classes" },
-            { to: "/students", icon: FaUserGraduate, label: "Student" },
-            { to: "/schedules", icon: FaCalendarAlt, label: "Schedules" },
-            { to: "/teacher-schedules", icon: FaCalendarAlt, label: "TeacherSchedules" },
-          ].map((item) => (
-            <NavLink key={item.to} to={item.to} className={navLinkClasses}>
-              {({ isActive }) => (
-                <>
-                  <item.icon className={isActive ? activeIconClasses : iconClasses} />
-                  {item.label}
-                </>
-              )}
-            </NavLink>
-          ))}
+        {(currentUser.role === 'teacher'
+          ? [
+              { to: "/teacher-schedules", icon: FaCalendarAlt, label: "TeacherSchedules" }
+            ]
+          : [
+              { to: "/teachers", icon: FaChalkboardTeacher, label: "Teachers" },
+              { to: "/subjects", icon: FaBook, label: "Subjects" },
+              { to: "/grades", icon: FaGraduationCap, label: "Grades" },
+              { to: "/classes", icon: FaSchool, label: "Classes" },
+              { to: "/students", icon: FaUserGraduate, label: "Student" },
+              { to: "/schedules", icon: FaCalendarAlt, label: "Schedules" },
+              { to: "/teachers-schedules", icon: FaCalendarAlt, label: "TeachersSchedules" }
+              
+            ]
+        ).map((item) => (
+          <NavLink key={item.to} to={item.to} className={navLinkClasses}>
+            {({ isActive }) => (
+              <>
+                <item.icon className={isActive ? activeIconClasses : iconClasses} />
+                {item.label}
+              </>
+            )}
+          </NavLink>
+        ))}
         </nav>
 
         {/* User Info & Logout */}
