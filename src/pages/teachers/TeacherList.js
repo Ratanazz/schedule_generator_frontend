@@ -199,7 +199,8 @@ const TeacherList = () => {
   if (loading && totalTeachers === 0 && !error) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-100">
-        <div className="text-gray-600 text-lg font-semibold animate-pulse">Loading Teachers...</div>
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="text-gray-600 text-lg font-semibold animate-pulse ml-4">Loading Teachers...</div>
       </div>
     );
   }

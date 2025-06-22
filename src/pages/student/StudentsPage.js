@@ -459,7 +459,7 @@ const StudentsPage = () => {
     );
 
     if (loading && students.length === 0 && !error && !debouncedSearchTerm && !selectedGradeId && !selectedSex && currentPage === 1) {
-        return <div className="min-h-screen flex items-center justify-center bg-gray-50"><p className="text-lg text-gray-500">Loading students...</p></div>;
+        return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div><p className="text-lg text-gray-500 ml-4">Loading students...</p></div>;
     }
 
     return (

@@ -14,7 +14,7 @@ import GradeForm from './pages/grades/GradeForm';
 import StudentsPage from './pages/student/StudentsPage';
 import ScheduleGenerationSetup from './pages/schedules/ScheduleGenerationSetup';
 import ScheduleList from './pages/schedules/ScheduleList';
-import ScheduleForm from './pages/schedules/ScheduleForm';
+
 import ScheduleView from './pages/schedules/ScheduleView';
 import ScheduleGenerate from './pages/schedules/ScheduleGenerate';
 import Login from './pages/auth/Login';
@@ -75,8 +75,8 @@ const AppContent = () => {
 
           {/* Schedule Routes */}
           <Route path="/schedules" element={<ProtectedRoute><ScheduleList /></ProtectedRoute>} />
-          <Route path="/schedules/create" element={<ProtectedRoute><ScheduleForm /></ProtectedRoute>} />
-          <Route path="/schedules/edit/:id" element={<ProtectedRoute><ScheduleForm /></ProtectedRoute>} />
+          
+          
           <Route path="/schedules/view/:id" element={<ProtectedRoute><ScheduleView /></ProtectedRoute>} />
           <Route path="/schedules/generate/:id" element={<ProtectedRoute><ScheduleGenerate /></ProtectedRoute>} />
           <Route path="/schedules/generate-setup" element={<ProtectedRoute><ScheduleGenerationSetup /></ProtectedRoute>} />
