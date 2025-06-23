@@ -82,7 +82,8 @@ const Sidebar = () => {
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         {(currentUser.role === 'teacher'
           ? [
-              { to: "/teacher-schedules", icon: FaCalendarAlt, label: "TeacherSchedules" }
+              { to: "/teacher-schedules", icon: FaCalendarAlt, label: "TeacherSchedules" },
+              { to: "/studentlist", icon: FaCalendarAlt, label: "StudentList" }
             ]
           : [
               { to: "/teachers", icon: FaChalkboardTeacher, label: "Teachers" },

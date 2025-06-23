@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Added useEffect
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -18,22 +18,45 @@ const Register = () => {
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { register, error, loading } = useAuth();
+  const { register, error, loading, setError } = useAuth(); // Destructure setError
   const navigate = useNavigate();
+
+  // Clear error when component unmounts or inputs change
+  useEffect(() => {
+    return () => {
+      if (setError) setError(null); // Clear global auth error on unmount
+    };
+  }, [setError]);
+
+  const handleInputChange = (setter) => (e) => {
+    setter(e.target.value);
+    if (error && setError) setError(null); // Clear error on input change
+  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
 
     if (password !== passwordConfirmation) {
-      alert("Passwords do not match.");
+      // Use the AuthContext error for consistency, or keep alert
+      if (setError) setError("Passwords do not match.");
+      else alert("Passwords do not match.");
       return;
     }
 
-    const success = await register({ name, email, password, password_confirmation: passwordConfirmation });
+    // The data structure matches what Laravel expects
+    const success = await register({
+      name,
+      email,
+      password,
+      password_confirmation: passwordConfirmation, // Ensure this key matches backend expectation
+    });
+
     if (success) {
-      navigate('/');
+      navigate('/'); // Or to a dashboard, or a "please verify email" page
     }
+    // Error is handled by the AuthContext and displayed via the `error` state
   };
 
   return (
@@ -72,7 +95,7 @@ const Register = () => {
                   id="name"
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={handleInputChange(setName)} // Use helper
                   required
                   className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                   placeholder="Your full name"
@@ -93,7 +116,7 @@ const Register = () => {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={handleInputChange(setEmail)} // Use helper
                   required
                   className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                   placeholder="you@example.com"
@@ -115,16 +138,17 @@ const Register = () => {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={handleInputChange(setPassword)} // Use helper
                   required
                   className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150"
-                  placeholder="Create a password"
+                  placeholder="Create a password (min 8 characters)"
                   autoComplete="new-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <FaEyeSlash className="h-5 w-5" /> : <FaEye className="h-5 w-5" />}
                 </button>
@@ -144,7 +168,7 @@ const Register = () => {
                   id="passwordConfirmation"
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={passwordConfirmation}
-                  onChange={(e) => setPasswordConfirmation(e.target.value)}
+                  onChange={handleInputChange(setPasswordConfirmation)} // Use helper
                   required
                   className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                   placeholder="Confirm your password"
@@ -153,6 +177,7 @@ const Register = () => {
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
+                   aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
                 >
                   {showConfirmPassword ? (
                     <FaEyeSlash className="h-5 w-5" />

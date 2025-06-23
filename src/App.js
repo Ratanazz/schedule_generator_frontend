@@ -25,6 +25,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import './App.css';
 import TeacherScheduleView from './pages/teacherschedules/TeacherScheduleView';
 import AdminTeacherScheduleView from './pages/teacherschedules/AdminTeacherScheduleView';
+import StudentsListForTeacher from './pages/student/StudentsListForTeacher';
 
 
 const AppContent = () => {
@@ -72,6 +73,8 @@ const AppContent = () => {
           {/* Teacher Schedules */}
           <Route path="/teacher-schedules" element={<ProtectedRoute><TeacherScheduleView /></ProtectedRoute>} />
           <Route path="/teachers-schedules" element={<ProtectedRoute><AdminTeacherScheduleView /></ProtectedRoute>} />
+            {/* Teacher List Students */}
+          <Route path="/studentlist" element={<ProtectedRoute><StudentsListForTeacher /></ProtectedRoute>} />
 
           {/* Schedule Routes */}
           <Route path="/schedules" element={<ProtectedRoute><ScheduleList /></ProtectedRoute>} />
