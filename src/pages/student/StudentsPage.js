@@ -51,12 +51,12 @@ const LoadingSpinnerIcon = () => (
 const StudentsPage = () => {
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null); // For fetch errors
+    const [error, setError] = useState(null); 
 
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalStudents, setTotalStudents] = useState(0);
-    const [fromStudent, setFromStudent] = useState(0);
+    const [fromStudent, setFromStudent] = useState(0); 
     const [toStudent, setToStudent] = useState(0);
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -65,8 +65,12 @@ const StudentsPage = () => {
 
     const [gradesForFilter, setGradesForFilter] = useState([]);
     const [selectedGradeId, setSelectedGradeId] = useState('');
-    const [selectedSex, setSelectedSex] = useState('');
-    const [loadingFilters, setLoadingFilters] = useState(false);
+    const [loadingFilters, setLoadingFilters] = useState(false); 
+
+    const [gradeClassesForFilter, setGradeClassesForFilter] = useState([]);
+    const [selectedGradeClassId, setSelectedGradeClassId] = useState('');
+    const [loadingGradeClasses, setLoadingGradeClasses] = useState(false);
+
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState(null);
@@ -80,11 +84,9 @@ const StudentsPage = () => {
     const importFileInputRef = useRef(null);
     const searchInputRef = useRef(null);
 
-    // Action Feedback State (like TeacherList)
     const [actionFeedback, setActionFeedback] = useState({ message: '', type: '' });
     const ACTION_FEEDBACK_TIMEOUT = 5000;
 
-    // Confirmation Modal State
     const [confirmModalState, setConfirmModalState] = useState({
         isOpen: false,
         title: '',
@@ -95,7 +97,6 @@ const StudentsPage = () => {
         data: null,
     });
 
-    // Effect for Action Feedback auto-dismiss
     useEffect(() => {
         let timer;
         if (actionFeedback.message) {
@@ -109,7 +110,7 @@ const StudentsPage = () => {
     useEffect(() => {
         const timerId = setTimeout(() => {
             setDebouncedSearchTerm(searchTerm);
-            setCurrentPage(1);
+            setCurrentPage(1); // Reset to page 1 on new search
         }, 500);
         return () => clearTimeout(timerId);
     }, [searchTerm]);
@@ -119,10 +120,11 @@ const StudentsPage = () => {
             setLoadingFilters(true);
             try {
                 const res = await axios.get('/grades');
-                setGradesForFilter(res.data || []);
+                setGradesForFilter(Array.isArray(res.data) ? res.data : []);
             } catch (err) {
                 console.error("Failed to fetch grades for filter:", err);
                 setActionFeedback({ message: 'Failed to load grade filters.', type: 'error' });
+                setGradesForFilter([]);
             } finally {
                 setLoadingFilters(false);
             }
@@ -130,40 +132,89 @@ const StudentsPage = () => {
         fetchGrades();
     }, []);
 
+    useEffect(() => {
+    const fetchGradeClasses = async () => {
+        if (!selectedGradeId) {
+            setGradeClassesForFilter([]);
+            setSelectedGradeClassId(''); 
+            return;
+        }
+        setLoadingGradeClasses(true);
+        try {
+            const res = await axios.get(`/grades/${selectedGradeId}/gradeclasses`); 
+            setGradeClassesForFilter(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            console.error(`Failed to fetch grade classes for grade ${selectedGradeId}:`, err);
+            setActionFeedback({ message: 'Failed to load class/section filters.', type: 'error' });
+            setGradeClassesForFilter([]); 
+        } finally {
+            setLoadingGradeClasses(false);
+        }
+    };
+    fetchGradeClasses();
+    }, [selectedGradeId]);
+
     const fetchStudents = useCallback(async (pageToFetch = 1) => {
         setLoading(true);
-        setError(null); // Clear previous fetch errors
-        let params = `page=${pageToFetch}&per_page=${perPage}`;
+        setError(null);
+        // Ensure pageToFetch is a valid number, default to 1
+        const validPageToFetch = Number.isFinite(Number(pageToFetch)) && Number(pageToFetch) > 0 ? Number(pageToFetch) : 1;
+
+        let params = `page=${validPageToFetch}&per_page=${perPage}`;
         if (debouncedSearchTerm) params += `&search=${encodeURIComponent(debouncedSearchTerm)}`;
         if (selectedGradeId) params += `&grade_id=${selectedGradeId}`;
-        if (selectedSex) params += `&sex=${selectedSex}`;
+        if (selectedGradeClassId) params += `&grade_class_id=${selectedGradeClassId}`;
 
         try {
             const res = await axios.get(`/students?${params}`);
             const data = res.data;
-            setStudents(data.data);
-            setCurrentPage(data.current_page);
-            setTotalPages(data.last_page);
-            setTotalStudents(data.total);
-            setFromStudent(data.from);
-            setToStudent(data.to);
+
+            setStudents(Array.isArray(data.data) ? data.data : []);
+
+            const apiCurrentPage = Number(data.current_page);
+            setCurrentPage(Number.isFinite(apiCurrentPage) && apiCurrentPage > 0 ? apiCurrentPage : 1);
+
+            const apiLastPage = Number(data.last_page);
+            setTotalPages(Number.isFinite(apiLastPage) && apiLastPage > 0 ? apiLastPage : 1);
+
+            const apiTotal = Number(data.total);
+            setTotalStudents(Number.isFinite(apiTotal) && apiTotal >= 0 ? apiTotal : 0);
+
+            const studentList = Array.isArray(data.data) ? data.data : [];
+            if (studentList.length > 0) {
+                const apiFrom = Number(data.from);
+                setFromStudent(Number.isFinite(apiFrom) && apiFrom > 0 ? apiFrom : ( (validPageToFetch - 1) * perPage + 1 )  );
+
+
+                const apiTo = Number(data.to);
+                setToStudent(Number.isFinite(apiTo) && apiTo >= (Number.isFinite(apiFrom) ? apiFrom : 0) ? apiTo : ( (validPageToFetch - 1) * perPage + studentList.length) );
+            } else {
+                setFromStudent(0);
+                setToStudent(0);
+            }
+
         } catch (err) {
             const fetchErrMessage = err.response?.data?.message || 'Failed to fetch students. Please try again.';
-            setError(fetchErrMessage); // Set dedicated fetch error state
+            setError(fetchErrMessage);
             console.error("Fetch error:", err);
             setStudents([]);
-            setFromStudent(0); setToStudent(0); setTotalStudents(0); setTotalPages(1);
+            setFromStudent(0); 
+            setToStudent(0); 
+            setTotalStudents(0);
+            setTotalPages(1); // Also reset totalPages on error
+            // currentPage keeps its previous value or initial 1, which is fine
         } finally {
             setLoading(false);
         }
-    }, [perPage, debouncedSearchTerm, selectedGradeId, selectedSex]);
+    }, [perPage, debouncedSearchTerm, selectedGradeId, selectedGradeClassId]); // currentPage removed from deps, fetchStudents calls itself with page
 
     useEffect(() => {
+        // currentPage is a dependency here, so when it changes, fetchStudents is called
+        // fetchStudents itself should handle what page it's fetching.
         fetchStudents(currentPage);
-    }, [currentPage, fetchStudents]);
+    }, [currentPage, fetchStudents]); // Re-added fetchStudents as it has dependencies that might change e.g. perPage
 
 
-    // --- Confirmation Modal Helper Functions ---
     const openConfirmationModal = (config) => {
         setConfirmModalState({
             isOpen: true,
@@ -193,23 +244,30 @@ const StudentsPage = () => {
         if (searchInputRef.current) searchInputRef.current.focus();
     };
     const handlePerPageChange = (event) => {
-        setPerPage(Number(event.target.value));
-        setCurrentPage(1);
+        const newPerPage = Number(event.target.value);
+        if (Number.isFinite(newPerPage) && newPerPage > 0) {
+            setPerPage(newPerPage);
+        } else {
+            setPerPage(10); // Fallback to default
+        }
+        setCurrentPage(1); // Reset to page 1
     };
     const handleGradeFilterChange = (event) => {
         setSelectedGradeId(event.target.value);
-        setCurrentPage(1);
+        setSelectedGradeClassId(''); 
+        setCurrentPage(1); // Reset to page 1
     };
-    const handleSexFilterChange = (event) => {
-        setSelectedSex(event.target.value);
-        setCurrentPage(1);
+    const handleGradeClassFilterChange = (event) => {
+        setSelectedGradeClassId(event.target.value);
+        setCurrentPage(1); // Reset to page 1
     };
+
     const resetFiltersAndSearch = () => {
         setSearchTerm('');
-        setDebouncedSearchTerm('');
+        setDebouncedSearchTerm(''); // This will also trigger its own useEffect
         setSelectedGradeId('');
-        setSelectedSex('');
-        setCurrentPage(1);
+        setSelectedGradeClassId(''); 
+        setCurrentPage(1); // Explicitly reset to page 1
     };
 
     const handleDeleteRequest = (studentId, studentName) => {
@@ -227,10 +285,11 @@ const StudentsPage = () => {
         try {
             await axios.delete(`/students/${id}`);
             setActionFeedback({ message: 'Student deleted successfully.', type: 'success' });
+            // If current page becomes empty after delete, try to go to previous page or refetch current
             if (students.length === 1 && currentPage > 1) {
-                setCurrentPage(prev => prev - 1);
+                setCurrentPage(prev => Math.max(1, prev - 1)); // Go to prev page, ensure it's at least 1
             } else {
-                fetchStudents(currentPage);
+                fetchStudents(currentPage); // Refetch current page (or page 1 if current page was 1)
             }
         } catch (err) {
             setActionFeedback({ message: err.response?.data?.message || 'Failed to delete student.', type: 'error' });
@@ -266,15 +325,19 @@ const StudentsPage = () => {
                 setActionFeedback({ message: 'Student updated successfully.', type: 'success' });
             }
             closeModal();
+
+            // Ensure totalPages is a valid number before using it
+            const safeTotalPages = Number.isFinite(totalPages) && totalPages > 0 ? totalPages : 1;
+
             if (modalMode === 'add' && totalStudents > 0 && totalStudents % perPage === 0) {
-                 fetchStudents(totalPages + 1);
+                 fetchStudents(safeTotalPages + 1);
             } else if (modalMode === 'add' && students.length < perPage ) {
-                 fetchStudents(currentPage);
-            } else if (modalMode === 'add') {
-                 fetchStudents(totalPages);
+                 fetchStudents(currentPage); // currentPage should be safe now
+            } else if (modalMode === 'add') { // Go to last page
+                 fetchStudents(safeTotalPages);
             }
-            else {
-                 fetchStudents(currentPage);
+            else { // For edit
+                 fetchStudents(currentPage); // currentPage should be safe now
             }
         } catch (err) {
             if (err.response?.status === 422 && err.response?.data?.errors) {
@@ -293,7 +356,7 @@ const StudentsPage = () => {
         const queryParts = [];
         if (debouncedSearchTerm) queryParts.push(`search=${encodeURIComponent(debouncedSearchTerm)}`);
         if (selectedGradeId) queryParts.push(`grade_id=${selectedGradeId}`);
-        if (selectedSex) queryParts.push(`sex=${selectedSex}`);
+        if (selectedGradeClassId) queryParts.push(`grade_class_id=${selectedGradeClassId}`); 
         const params = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
 
         try {
@@ -352,7 +415,8 @@ const StudentsPage = () => {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             setActionFeedback({ message: response.data.message || 'Students imported successfully.', type: 'success' });
-            fetchStudents(1);
+            setCurrentPage(1); // Reset to page 1 after import
+            fetchStudents(1); 
         } catch (err) {
             console.error("IMPORT ERROR:", err);
             let importErrorMessage = 'An unexpected error occurred during import. Please check the console for details.';
@@ -363,13 +427,13 @@ const StudentsPage = () => {
 
                 if (errorData.errors) {
                     let detailsString = "\n\nDetails:\n";
-                    if (Array.isArray(errorData.errors)) { // Row processing errors
+                    if (Array.isArray(errorData.errors)) { 
                         errorData.errors.forEach(errMsg => {
                              if (typeof errMsg === 'string') detailsString += `  - ${errMsg}\n`;
                              else detailsString += `  - (Unexpected error format: ${JSON.stringify(errMsg)})\n`;
                         });
                         if (errorData.errors.length > 0) importErrorMessage = (backendMessage || "Import processed with errors.") + detailsString;
-                    } else if (typeof errorData.errors === 'object') { // Field validation errors
+                    } else if (typeof errorData.errors === 'object') { 
                         for (const field in errorData.errors) {
                             if (Array.isArray(errorData.errors[field])) {
                                 detailsString += `  - ${field}: ${errorData.errors[field].join(', ')}\n`;
@@ -396,28 +460,48 @@ const StudentsPage = () => {
 
 
     const renderPageNumbers = () => {
-        // ... (No changes to renderPageNumbers and renderPageButton logic)
         if (totalPages <= 1) return null;
         const pageNumbers = [];
         const maxVisiblePages = 5;
         const pageNeighbours = 1;
+
+        // Current Page and TotalPages must be valid numbers for this logic
+        const safeCurrentPage = Number.isFinite(currentPage) ? currentPage : 1;
+        const safeTotalPages = Number.isFinite(totalPages) ? totalPages : 1;
+
+        if (safeTotalPages <= 1) return null;
+
+
         pageNumbers.push(renderPageButton(1));
-        let startEllipsisNeeded = currentPage > pageNeighbours + 2;
-        let endEllipsisNeeded = currentPage < totalPages - pageNeighbours - 1;
-        if (totalPages <= maxVisiblePages) {
+        let startEllipsisNeeded = safeCurrentPage > pageNeighbours + 2;
+        let endEllipsisNeeded = safeCurrentPage < safeTotalPages - pageNeighbours - 1;
+
+        if (safeTotalPages <= maxVisiblePages) {
             startEllipsisNeeded = false;
             endEllipsisNeeded = false;
-            for (let i = 2; i < totalPages; i++) pageNumbers.push(renderPageButton(i));
+            for (let i = 2; i < safeTotalPages; i++) pageNumbers.push(renderPageButton(i));
         } else {
             if (startEllipsisNeeded) pageNumbers.push(<span key="start-ellipsis" className="px-3 py-1.5 text-sm text-gray-700">...</span>);
-            let startPage = Math.max(2, currentPage - pageNeighbours);
-            let endPage = Math.min(totalPages - 1, currentPage + pageNeighbours);
-            if (currentPage < maxVisiblePages - pageNeighbours - 1) endPage = Math.min(totalPages - 1, maxVisiblePages - 2);
-            if (currentPage > totalPages - (maxVisiblePages - pageNeighbours - 1)) startPage = Math.max(2, totalPages - (maxVisiblePages - 3));
-            for (let i = startPage; i <= endPage; i++) if (i !== 1 && i !== totalPages) pageNumbers.push(renderPageButton(i));
-            if (endEllipsisNeeded && endPage < totalPages - 1) pageNumbers.push(<span key="end-ellipsis" className="px-3 py-1.5 text-sm text-gray-700">...</span>);
+            
+            let startPage = Math.max(2, safeCurrentPage - pageNeighbours);
+            let endPage = Math.min(safeTotalPages - 1, safeCurrentPage + pageNeighbours);
+
+            if (safeCurrentPage < maxVisiblePages - pageNeighbours - 1) {
+                endPage = Math.min(safeTotalPages - 1, maxVisiblePages - 2);
+            }
+            if (safeCurrentPage > safeTotalPages - (maxVisiblePages - pageNeighbours - 1)) {
+                startPage = Math.max(2, safeTotalPages - (maxVisiblePages - 3));
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                if (i !== 1 && i !== safeTotalPages) pageNumbers.push(renderPageButton(i));
+            }
+
+            if (endEllipsisNeeded && endPage < safeTotalPages - 1) {
+                pageNumbers.push(<span key="end-ellipsis" className="px-3 py-1.5 text-sm text-gray-700">...</span>);
+            }
         }
-        if (totalPages > 1) pageNumbers.push(renderPageButton(totalPages));
+        if (safeTotalPages > 1) pageNumbers.push(renderPageButton(safeTotalPages));
         return pageNumbers;
     };
 
@@ -432,15 +516,15 @@ const StudentsPage = () => {
         </button>
     );
 
-    if (loading && students.length === 0 && !error && !debouncedSearchTerm && !selectedGradeId && !selectedSex && currentPage === 1) {
+    // Initial loading state more specific
+    if (loading && currentPage === 1 && students.length === 0 && !error && !debouncedSearchTerm && !selectedGradeId && !selectedGradeClassId) {
         return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div><p className="text-lg text-gray-500 ml-4">Loading students...</p></div>;
     }
 
     return (
         <>
-            {/* Action Feedback Popup (Top Right) */}
             {actionFeedback.message && (
-                <div className="fixed top-5 right-5 z-[101] w-full max-w-sm sm:max-w-md"> {/* Ensure high z-index */}
+                <div className="fixed top-5 right-5 z-[101] w-full max-w-sm sm:max-w-md"> 
                     <div
                         className={`p-4 rounded-lg shadow-xl transition-all duration-300 ease-in-out transform ${
                         actionFeedback.type === 'success' ? 'bg-green-100 border-l-4 border-green-500 text-green-800' :
@@ -476,7 +560,6 @@ const StudentsPage = () => {
 
             <div className="container mx-auto p-4 sm:p-6 md:p-8 bg-gray-50 min-h-screen">
                 <header className="mb-8">
-                    {/* ... Header content (no changes) ... */}
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Students Management</h1>
                         <div className="flex flex-wrap gap-2">
@@ -504,7 +587,7 @@ const StudentsPage = () => {
                             </button>
                             <button
                                 onClick={handleExportCSV}
-                                disabled={isExporting || loading}
+                                disabled={isExporting || loading || totalStudents === 0}
                                 className="px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition duration-150 ease-in-out flex items-center disabled:opacity-50 text-sm sm:px-5 sm:py-2.5"
                             >
                                 {isExporting ? <LoadingSpinnerIcon/> : <DownloadIcon className="w-5 h-5 mr-2" />}
@@ -514,7 +597,7 @@ const StudentsPage = () => {
                     </div>
                 </header>
 
-                {error && ( // Display fetch error, not action feedback which is now a popup
+                {error && ( 
                     <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow" role="alert">
                         <p className="font-bold">Error Fetching Data</p>
                         <p>{error}</p>
@@ -522,7 +605,6 @@ const StudentsPage = () => {
                 )}
 
                 <div className="mb-6 p-4 bg-white rounded-lg shadow">
-                    {/* ... Filter and Search controls (no changes) ... */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                         <div>
                             <label htmlFor="perPage" className="block text-sm font-medium text-gray-700 mb-1">Show entries:</label>
@@ -577,22 +659,24 @@ const StudentsPage = () => {
                             </select>
                         </div>
                         <div>
-                            <label htmlFor="sexFilter" className="block text-sm font-medium text-gray-700 mb-1">Filter by Sex:</label>
+                            <label htmlFor="gradeClassFilter" className="block text-sm font-medium text-gray-700 mb-1">Filter by Class/Section:</label>
                             <select
-                                id="sexFilter"
-                                value={selectedSex}
-                                onChange={handleSexFilterChange}
-                                disabled={loading}
+                                id="gradeClassFilter"
+                                value={selectedGradeClassId}
+                                onChange={handleGradeClassFilterChange}
+                                disabled={loading || loadingGradeClasses || !selectedGradeId || gradeClassesForFilter.length === 0}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                             >
-                                <option value="">All Sexes</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Other">Other</option>
+                                <option value="">{selectedGradeId ? (gradeClassesForFilter.length > 0 ? "All Sections" : (loadingGradeClasses ? "Loading..." : "No Sections Found")) : "Select Grade First"}</option>
+                                {gradeClassesForFilter.map(gc => (
+                                    <option key={gc.id} value={gc.id}>
+                                        {gc.name || `${gc.section || 'N/A'}${gc.shift ? ` (${gc.shift})` : ''}`}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                     </div>
-                    {(debouncedSearchTerm || selectedGradeId || selectedSex) && (
+                    {(debouncedSearchTerm || selectedGradeId || selectedGradeClassId) && (
                         <div className="mt-4">
                             <button
                                 onClick={resetFiltersAndSearch}
@@ -606,16 +690,15 @@ const StudentsPage = () => {
 
                 <div className="bg-white rounded-lg shadow overflow-hidden">
                     { !loading && students.length === 0 && !error ? (
-                        // ... No students found message (no changes) ...
                         <div className="text-center py-12 px-6">
                             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                 <path vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
                             </svg>
                             <h3 className="mt-2 text-xl font-medium text-gray-900">No students found</h3>
                             <p className="mt-1 text-sm text-gray-500">
-                                {debouncedSearchTerm || selectedGradeId || selectedSex ? "Try adjusting your search or filters." : "Get started by adding a new student."}
+                                {debouncedSearchTerm || selectedGradeId || selectedGradeClassId ? "Try adjusting your search or filters." : "Get started by adding a new student."}
                             </p>
-                            {!debouncedSearchTerm && !selectedGradeId && !selectedSex && (
+                            {!debouncedSearchTerm && !selectedGradeId && !selectedGradeClassId && (
                                 <div className="mt-6">
                                     <button
                                         type="button"
@@ -631,10 +714,9 @@ const StudentsPage = () => {
                         <>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200">
-                                    {/* ... Table Head (no changes) ... */}
                                     <thead className="bg-gray-50">
                                         <tr>
-                                            {['ID', 'UID', 'Name', 'Sex', 'Birth Date', 'Grade', 'Class', 'Actions'].map(header => (
+                                            {['#', 'UID', 'Name', 'Sex', 'Birth Date', 'Grade', 'Class', 'Actions'].map(header => ( 
                                                 <th key={header} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     {header}
                                                 </th>
@@ -642,7 +724,7 @@ const StudentsPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {/* ... Skeleton loading (no changes) ... */}
+                                        {/* Skeleton for initial full page load or when students array is empty but loading is true */}
                                         {loading && students.length === 0 && (
                                             Array.from({ length: perPage }).map((_, index) => (
                                                 <tr key={`skeleton-initial-${index}`} className="animate-pulse">
@@ -657,9 +739,10 @@ const StudentsPage = () => {
                                                 </tr>
                                             ))
                                         )}
+                                        {/* Actual student data */}
                                         {!loading && students.map((student, index) => (
                                             <tr key={student.id} className={index % 2 === 0 ? undefined : 'bg-gray-50 hover:bg-gray-100'}>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.id}</td> {/* Changed back to student.id for actual ID */}
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{(currentPage - 1) * perPage + index + 1}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.student_uid || <span className="text-gray-400 italic">N/A</span>}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">{student.full_name}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.sex}</td>
@@ -667,7 +750,7 @@ const StudentsPage = () => {
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.grade?.name || <span className="text-gray-400 italic">N/A</span>}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                     {student.grade_class
-                                                        ? `${student.grade_class.grade?.name || ''} ${student.grade_class.section || ''} (${student.grade_class.shift || ''})`.trim()
+                                                        ? `${student.grade_class.grade?.name || ''} ${student.grade_class.section || ''} ${student.grade_class.shift ? '(' + student.grade_class.shift + ')' : ''}`.trim().replace(/ +(?=\()/, '') 
                                                         : <span className="text-gray-400 italic">Unassigned</span>}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -688,14 +771,14 @@ const StudentsPage = () => {
                                                 </td>
                                             </tr>
                                         ))}
-                                        {/* ... More skeleton loading (no changes) ... */}
+                                        {/* Skeleton for subsequent page loads when students array might already have items but loading is true */}
                                         {loading && students.length > 0 && (
-                                            Array.from({ length: Math.min(perPage, 3) }).map((_, index) => (
+                                            Array.from({ length: Math.min(perPage, 3) }).map((_, index) => ( // Show a few skeleton rows
                                                 <tr key={`skeleton-load-${index}`} className="animate-pulse">
                                                 <td className="px-6 py-4 whitespace-nowrap"><div className="h-4 bg-gray-200 rounded w-10"></div></td>
                                                     <td className="px-6 py-4 whitespace-nowrap"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
                                                     <td className="px-6 py-4 whitespace-nowrap"><div className="h-4 bg-gray-200 rounded w-40"></div></td>
-                                                    <td className="px-6 py-4 whitespace-nowrap" colSpan="5"><div className="h-4 bg-gray-200 rounded w-full"></div></td>
+                                                    <td className="px-6 py-4 whitespace-nowrap" colSpan="5"><div className="h-4 bg-gray-200 rounded w-full"></div></td> {/* Simplified for remaining cells */}
                                                 </tr>
                                             ))
                                         )}
@@ -703,13 +786,14 @@ const StudentsPage = () => {
                                 </table>
                             </div>
 
+                            {/* Pagination - Ensure totalStudents is positive and not loading */}
                             {totalStudents > 0 && !loading && (
-                                // ... Pagination (no changes) ...
                                 <div className="py-3 px-4 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200">
                                     <div className="text-sm text-gray-700 mb-2 sm:mb-0">
                                         Showing <span className="font-medium">{fromStudent || 0}</span> to <span className="font-medium">{toStudent || 0}</span> of <span className="font-medium">{totalStudents}</span> results
                                     </div>
-                                    {totalPages > 1 && (
+                                    {/* Ensure totalPages is valid before rendering pagination controls */}
+                                    {Number.isFinite(totalPages) && totalPages > 1 && (
                                         <div className="flex items-center space-x-1">
                                             <button
                                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}

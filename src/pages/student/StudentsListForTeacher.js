@@ -241,7 +241,7 @@ const StudentListForTeacher = () => {
         <div className="container mx-auto p-4 sm:p-6 md:p-8 bg-gray-50 min-h-screen">
             <header className="mb-8">
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Student Directory</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Student List</h1>
                     <div className="flex flex-wrap gap-2">
                         {/* Add Student button removed */}
                         <button
@@ -386,7 +386,7 @@ const StudentListForTeacher = () => {
                                     )}
                                     {!loading && students.map((student, index) => (
                                         <tr key={student.id} className={index % 2 === 0 ? 'hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100'}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{fromStudent + index}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{index + 1}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.student_uid || <span className="text-gray-400 italic">N/A</span>}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">{student.full_name}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.sex}</td>
