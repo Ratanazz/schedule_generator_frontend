@@ -134,13 +134,16 @@ const TeacherList = () => {
       if (selectedTeacherDetail && selectedTeacherDetail.id === teacher.id) {
         closeDetailModal();
       }
+      if (editingTeacher && editingTeacher.id === teacher.id) {
+        closeFormModal();
+      }
     } catch (err) {
       console.error("Delete Profile Error:", err);
       const errorMessage = err.response?.data?.message || `Failed to delete teacher profile.`;
       setActionFeedback({ message: errorMessage, type: 'error' });
     }
   };
-
+  
   const handleCreateAccountRequest = (teacher) => {
     if (!teacher || !teacher.id || !teacher.name) {
         console.error("handleCreateAccountRequest called with invalid teacher data:", teacher);
@@ -277,7 +280,7 @@ const TeacherList = () => {
   const openAddTeacherModal = () => { setEditingTeacher(null); setIsFormModalOpen(true); };
   const openEditTeacherModal = (teacher) => { setEditingTeacher(teacher); setIsFormModalOpen(true); if(isDetailModalOpen) setIsDetailModalOpen(false); };
   const closeFormModal = () => { setIsFormModalOpen(false); setEditingTeacher(null); };
-
+  
   const handleFormSaveSuccess = () => {
     fetchTeachers();
     closeFormModal();
@@ -530,7 +533,7 @@ const TeacherList = () => {
           <TeacherDetailModal
             teacher={selectedTeacherDetail}
             onClose={closeDetailModal}
-            onDelete={(teacherData) => handleDeleteProfileRequest(teacherData)} // Pass the whole teacher object
+            onDelete={() => handleDeleteProfileRequest(selectedTeacherDetail)} 
             onEdit={openEditTeacherModal}
           />
         )}
@@ -539,6 +542,20 @@ const TeacherList = () => {
           <TeacherFormModal
             isOpen={isFormModalOpen}
             onClose={closeFormModal}
+            onDelete={(teacherIdFromModal) => { // Corrected Block
+              if (editingTeacher && editingTeacher.id === teacherIdFromModal) {
+                handleDeleteProfileRequest(editingTeacher);
+              } else {
+                const errorMessage = editingTeacher
+                  ? `Deletion error: ID mismatch. Modal requested delete for ID ${teacherIdFromModal}, but current edit context is for teacher ID ${editingTeacher.id}.`
+                  : "Deletion error: No teacher is currently being edited in the form.";
+                console.error(errorMessage, "Current editingTeacher:", editingTeacher);
+                setActionFeedback({
+                  message: "Cannot proceed with deletion: Inconsistent teacher data or no teacher selected for editing.",
+                  type: 'error'
+                });
+              }
+            }}
             teacherToEdit={editingTeacher}
             onSaveSuccess={handleFormSaveSuccess}
           />

@@ -71,7 +71,7 @@ const Sidebar = () => {
         {/* Logo */}
         <div className="p-5 border-b border-gray-700/50">
           <NavLink to="/" className="flex items-center space-x-3 group" title="Go to Dashboard">
-            <FaHome className="h-8 w-8 text-blue-400 group-hover:text-blue-300 transition-colors" />
+            
             <span className="text-xl font-semibold text-white group-hover:text-blue-300 transition-colors whitespace-nowrap">
               Scheduler Pro
             </span>
