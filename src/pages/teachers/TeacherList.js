@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import TeacherFormModal from './TeacherFormModal'; // Adjust path if necessary
 import TeacherDetailModal from './TeacherDetailModal'; // Adjust path if necessary
-import ConfirmationModal from './ConfirmationModal'; // Adjust path if necessary
+import ConfirmationModal from '../../components/ConfirmationModal'; // Adjust path if necessary
 // import { useAuth } from './path/to/your/AuthContext';
 
 const TeacherList = () => {
