@@ -1,91 +1,62 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React from 'react';
 
-const GradeSubjectsTable = ({ grade, allSubjects, onUpdate }) => {
-  const [subjects, setSubjects] = useState(grade.subjects);
+const GradeSubjectsTable = ({ subjects, isEditing, onSubjectHourChange }) => {
+  if (!subjects || subjects.length === 0) {
+    return <p className="text-sm text-gray-500">No subjects assigned to this grade.</p>;
+  }
 
-  const updateStudyHour = async (subjectId, hours) => {
-    try {
-      await axios.put(`/grades/${grade.id}/subjects/${subjectId}`, { study_hours: hours });
-      onUpdate(); // Refresh from parent
-    } catch {
-      alert('Failed to update');
+  const handleHoursChange = (subjectId, value) => {
+    const hours = parseInt(value, 10);
+    if (!isNaN(hours) && hours >= 0) {
+      onSubjectHourChange(subjectId, hours);
+    } else if (value === "") { // Allow clearing the input
+      onSubjectHourChange(subjectId, 0);
     }
   };
-
-  const removeSubject = async (subjectId) => {
-    try {
-      await axios.delete(`/grades/${grade.id}/subjects/${subjectId}`);
-      onUpdate();
-    } catch {
-      alert('Failed to remove');
-    }
-  };
-
-  const addSubject = async (subjectId) => {
-    try {
-      await axios.post(`/grades/${grade.id}/subjects`, { subject_id: subjectId });
-      onUpdate();
-    } catch {
-      alert('Failed to add');
-    }
-  };
-
-  const availableSubjects = allSubjects.filter(s => !subjects.some(g => g.id === s.id));
 
   return (
-    <div className="space-y-4">
-      <table className="w-full table-auto text-sm">
-        <thead className="bg-gray-100 text-left">
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
           <tr>
-            <th className="p-2">Subject</th>
-            <th className="p-2">Hours</th>
-            <th className="p-2">Actions</th>
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+            >
+              Subject Name
+            </th>
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+            >
+              Study Hours/Week
+            </th>
+            {/* Add more headers if needed, e.g., for actions, but actions are now outside */}
           </tr>
         </thead>
-        <tbody>
-          {subjects.map(subject => (
-            <tr key={subject.id} className="border-b">
-              <td className="p-2">{subject.name}</td>
-              <td className="p-2">
-                <input
-                  type="number"
-                  className="w-20 border rounded px-2 py-1"
-                  defaultValue={subject.pivot?.study_hours || 0}
-                  onBlur={(e) => updateStudyHour(subject.id, parseInt(e.target.value))}
-                />
+        <tbody className="bg-white divide-y divide-gray-200">
+          {subjects.map((subject) => (
+            <tr key={subject.id}>
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                {subject.name}
               </td>
-              <td className="p-2">
-                <button
-                  onClick={() => removeSubject(subject.id)}
-                  className="text-red-500 hover:underline text-xs"
-                >
-                  Remove
-                </button>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {isEditing ? (
+                  <input
+                    type="number"
+                    min="0"
+                    value={subject.pivot?.study_hours || 0}
+                    onChange={(e) => handleHoursChange(subject.id, e.target.value)}
+                    className="mt-1 block w-24 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                ) : (
+                  subject.pivot?.study_hours || 0
+                )}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-
-      {availableSubjects.length > 0 && (
-        <div>
-          <select
-            defaultValue=""
-            onChange={(e) => {
-              const id = parseInt(e.target.value);
-              if (!isNaN(id)) addSubject(id);
-              e.target.value = '';
-            }}
-            className="border rounded px-3 py-2 text-sm"
-          >
-            <option value="">Add Subject...</option>
-            {availableSubjects.map(subject => (
-              <option key={subject.id} value={subject.id}>{subject.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
     </div>
   );
 };
