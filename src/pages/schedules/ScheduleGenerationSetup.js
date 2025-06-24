@@ -13,9 +13,11 @@ const ScheduleGenerationSetup = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationMessage, setGenerationMessage] = useState('');
   const [selectAll, setSelectAll] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
+  const [popupType, setPopupType] = useState('success');
 
   const navigate = useNavigate();
-
   const academicYears = Array.from({ length: 7 }, (_, i) => `${2024 + i}`);
 
   const fetchAllUserClasses = useCallback(async () => {
@@ -23,18 +25,15 @@ const ScheduleGenerationSetup = () => {
     try {
       const res = await axios.get('/gradeclasses');
       const fetchedClasses = res.data || [];
-
-      // Filter out classes that already have a schedule
       const unscheduledClasses = fetchedClasses.filter(cls => !cls.has_schedule);
-
       setAllClasses(unscheduledClasses);
       setFilteredClasses(unscheduledClasses);
-
       const uniqueGrades = [...new Set(unscheduledClasses.map(cls => cls.grade?.name).filter(Boolean))];
       setGrades(uniqueGrades.sort());
     } catch (error) {
       console.error("Error fetching classes:", error);
       setGenerationMessage("Error: Could not load class list.");
+      showPopupMessage("Failed to load class list.", 'error');
     }
     setLoadingClasses(false);
   }, []);
@@ -79,13 +78,14 @@ const ScheduleGenerationSetup = () => {
   const handleGenerateSchedules = async () => {
     if (!academicYear) {
       setGenerationMessage('Error: Please select an Academic Year.');
+      showPopupMessage('Please select an Academic Year.', 'error');
       return;
     }
     if (selectedClassIds.size === 0) {
       setGenerationMessage('Error: Please select at least one class.');
+      showPopupMessage('Please select at least one class.', 'error');
       return;
     }
-
     setIsGenerating(true);
     setGenerationMessage('Generating schedules... Please wait.');
     try {
@@ -93,11 +93,23 @@ const ScheduleGenerationSetup = () => {
         academic_year: academicYear,
         class_ids: Array.from(selectedClassIds)
       });
-      setGenerationMessage(res.data.message || 'Schedules generated successfully.');
+      const msg = res.data.message || 'Schedules generated successfully.';
+      setGenerationMessage(msg);
+      showPopupMessage(msg, 'success');
+      fetchAllUserClasses();
     } catch (error) {
-      setGenerationMessage(error.response?.data?.message || 'Error: Failed to generate schedules.');
+      const msg = error.response?.data?.message || 'Error: Failed to generate schedules.';
+      setGenerationMessage(msg);
+      showPopupMessage(msg, 'error');
     }
     setIsGenerating(false);
+  };
+
+  const showPopupMessage = (message, type = 'success') => {
+    setPopupMessage(message);
+    setPopupType(type);
+    setShowPopup(true);
+    setTimeout(() => setShowPopup(false), 3000);
   };
 
   return (
@@ -173,14 +185,9 @@ const ScheduleGenerationSetup = () => {
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[600px] overflow-y-auto pr-2">
             {filteredClasses.map(cls => (
-              <div
-                key={cls.id}
-                className="border rounded-lg p-4 bg-gray-50 hover:bg-blue-50 flex flex-col justify-between"
-              >
+              <div key={cls.id} className="border rounded-lg p-4 bg-gray-50 hover:bg-blue-50 flex flex-col justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    {cls.grade?.name || 'N/A'} {cls.section}
-                  </h3>
+                  <h3 className="text-lg font-semibold text-gray-800">{cls.grade?.name || 'N/A'} {cls.section}</h3>
                   <p className="text-sm text-gray-600 mt-1">Shift: {cls.shift || 'N/A'}</p>
                   <p className="text-sm text-gray-600">Class ID: {cls.id}</p>
                 </div>
@@ -197,6 +204,12 @@ const ScheduleGenerationSetup = () => {
           </div>
         )}
       </div>
+
+      {showPopup && (
+        <div className={`fixed top-4 right-4 px-4 py-3 rounded-xl shadow-lg z-50 text-white ${popupType === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+          {popupMessage}
+        </div>
+      )}
     </div>
   );
 };
