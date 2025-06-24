@@ -217,7 +217,7 @@ const SubjectList = () => {
               <option value={25}>25</option>
             </select>
             <span className="ml-2 text-sm text-gray-700">entries</span>
-            <Link
+            {/* <Link
                 to="/subjects/details" 
                 className="bg-blue-600 text-white py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition duration-300 flex items-center self-start sm:self-auto"
               >
@@ -236,7 +236,7 @@ const SubjectList = () => {
                   ></path>
                 </svg>
                 Subjects Details
-        </Link>
+        </Link> */}
           </div>
 
           <div className="overflow-x-auto">

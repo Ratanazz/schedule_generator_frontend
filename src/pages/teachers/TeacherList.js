@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useMemo, useContext } from 'react';
-import axios from 'axios'; // This will use the defaults (baseURL, Authorization header) set by AuthContext.js
+import React, { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
 import TeacherFormModal from './TeacherFormModal'; // Adjust path if necessary
 import TeacherDetailModal from './TeacherDetailModal'; // Adjust path if necessary
-// If you need access to currentUser for display or specific logic:
-// import { useAuth } from './path/to/your/AuthContext'; // Ensure this path is correct
+import ConfirmationModal from './ConfirmationModal'; // Adjust path if necessary
+// import { useAuth } from './path/to/your/AuthContext';
 
 const TeacherList = () => {
   // const { currentUser, logout: authLogout } = useAuth();
 
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); // For fetch errors
+  const [error, setError] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -25,14 +25,35 @@ const TeacherList = () => {
   const [editingTeacher, setEditingTeacher] = useState(null);
 
   const [actionFeedback, setActionFeedback] = useState({ message: '', type: '', data: null });
+  const ACTION_FEEDBACK_TIMEOUT = 5000;
+
+  const [confirmModalState, setConfirmModalState] = useState({
+    isOpen: false,
+    title: '',
+    messageComponent: null,
+    onConfirmAction: () => {},
+    confirmButtonText: 'Confirm',
+    confirmButtonClass: 'bg-blue-600 hover:bg-blue-700 text-white',
+    data: null,
+  });
 
   const defaultImageUrl = 'https://i.ibb.co/qY3TgFny/307ce493-b254-4b2d-8ba4-d12c080d6651.jpg';
+
+  useEffect(() => {
+    let timer;
+    if (actionFeedback.message) {
+      timer = setTimeout(() => {
+        setActionFeedback({ message: '', type: '', data: null });
+      }, ACTION_FEEDBACK_TIMEOUT);
+    }
+    return () => clearTimeout(timer);
+  }, [actionFeedback.message]);
 
   const fetchTeachers = async () => {
     setError(null);
     setLoading(true);
     try {
-      const response = await axios.get('/teachers'); // Relative path
+      const response = await axios.get('/teachers');
       console.log("API Response (/teachers from TeacherList):", response.data);
       setTeachers(Array.isArray(response.data) ? response.data : (response.data.data || []));
     } catch (err) {
@@ -59,16 +80,58 @@ const TeacherList = () => {
     fetchTeachers();
   }, []);
 
-  const handleDeleteProfile = async (teacherId, teacherName) => {
-    if (!window.confirm(`Are you sure you want to delete the PROFILE for ${teacherName}? This does not delete their login account. This action cannot be undone.`)) {
-      return;
+  // --- Confirmation Modal Helper Functions ---
+  const openConfirmationModal = (config) => {
+    setConfirmModalState({
+      isOpen: true,
+      title: config.title,
+      messageComponent: config.messageComponent,
+      onConfirmAction: config.onConfirmAction,
+      confirmButtonText: config.confirmButtonText || 'Confirm',
+      confirmButtonClass: config.confirmButtonClass || 'bg-blue-600 hover:bg-blue-700 text-white',
+      data: config.data || null,
+    });
+  };
+
+  const closeConfirmationModal = () => {
+    setConfirmModalState(prev => ({ ...prev, isOpen: false, data: null, onConfirmAction: () => {} }));
+  };
+
+  const handleModalConfirm = () => {
+    if (confirmModalState.onConfirmAction && typeof confirmModalState.onConfirmAction === 'function') {
+      confirmModalState.onConfirmAction(confirmModalState.data);
     }
+    closeConfirmationModal();
+  };
+
+  // --- CRUD and Account Action Handlers ---
+
+  const handleDeleteProfileRequest = (teacher) => {
+    if (!teacher || !teacher.id || !teacher.name) {
+        console.error("handleDeleteProfileRequest called with invalid teacher data:", teacher);
+        setActionFeedback({ message: "Invalid teacher data for deletion.", type: 'error' });
+        return;
+    }
+    openConfirmationModal({
+      title: 'Confirm Profile Deletion',
+      messageComponent: (
+        <p>Are you sure you want to delete the PROFILE for <strong>{teacher.name}</strong>? This does not delete their login account. This action cannot be undone.</p>
+      ),
+      onConfirmAction: executeDeleteProfile,
+      confirmButtonText: 'Delete Profile',
+      confirmButtonClass: 'bg-red-600 hover:bg-red-700 text-white',
+      data: teacher,
+    });
+  };
+
+  const executeDeleteProfile = async (teacher) => {
+    if (!teacher || !teacher.id) return;
     setActionFeedback({ message: '', type: '', data: null });
     try {
-      await axios.delete(`/teachers/${teacherId}`); // Relative path
-      setActionFeedback({ message: `Teacher profile for ${teacherName} deleted successfully.`, type: 'success' });
+      await axios.delete(`/teachers/${teacher.id}`);
+      setActionFeedback({ message: `Teacher profile for ${teacher.name} deleted successfully.`, type: 'success' });
       fetchTeachers();
-      if (selectedTeacherDetail && selectedTeacherDetail.id === teacherId) {
+      if (selectedTeacherDetail && selectedTeacherDetail.id === teacher.id) {
         closeDetailModal();
       }
     } catch (err) {
@@ -78,18 +141,33 @@ const TeacherList = () => {
     }
   };
 
-  const handleCreateAccount = async (teacherId, teacherName) => {
-    const teacher = teachers.find(t => t.id === teacherId);
-    if (!teacher || !teacher.email) {
-      setActionFeedback({ message: `Cannot create account: Teacher ${teacherName} does not have an email address. Please update their profile.`, type: 'error'});
+  const handleCreateAccountRequest = (teacher) => {
+    if (!teacher || !teacher.id || !teacher.name) {
+        console.error("handleCreateAccountRequest called with invalid teacher data:", teacher);
+        setActionFeedback({ message: "Invalid teacher data for account creation.", type: 'error' });
+        return;
+    }
+    if (!teacher.email) {
+      setActionFeedback({ message: `Cannot create account: Teacher ${teacher.name} does not have an email address. Please update their profile.`, type: 'error'});
       return;
     }
-    if (!window.confirm(`Create a user login account for ${teacherName}? Email: ${teacher.email}. A temporary password will be generated.`)) {
-      return;
-    }
+    openConfirmationModal({
+      title: 'Confirm Account Creation',
+      messageComponent: (
+        <p>Create a user login account for <strong>{teacher.name}</strong> (Email: {teacher.email})? A temporary password will be generated.</p>
+      ),
+      onConfirmAction: executeCreateAccount,
+      confirmButtonText: 'Create Account',
+      confirmButtonClass: 'bg-green-600 hover:bg-green-700 text-white',
+      data: teacher,
+    });
+  };
+
+  const executeCreateAccount = async (teacher) => {
+    if (!teacher || !teacher.id) return;
     setActionFeedback({ message: '', type: '', data: null });
     try {
-      const response = await axios.post(`/teachers/${teacherId}/create-account`, {}); // Relative path
+      const response = await axios.post(`/teachers/${teacher.id}/create-account`, {});
       setActionFeedback({
         message: `${response.data.message}. Login Email: ${response.data.email}.`,
         type: 'success',
@@ -103,13 +181,29 @@ const TeacherList = () => {
     }
   };
 
-  const handleDeleteAccount = async (teacherId, accountUserId, teacherName) => {
-    if (!window.confirm(`CRITICAL ACTION: Delete the USER LOGIN ACCOUNT for ${teacherName} (User ID: ${accountUserId})? This removes their ability to log in. The teacher profile will REMAIN. Are you absolutely sure?`)) {
-      return;
+  const handleDeleteAccountRequest = (teacher) => {
+    if (!teacher || !teacher.id || !teacher.name || !teacher.account_user_id) {
+        console.error("handleDeleteAccountRequest called with invalid teacher data:", teacher);
+        setActionFeedback({ message: "Invalid teacher data for account deletion.", type: 'error' });
+        return;
     }
+    openConfirmationModal({
+      title: 'Confirm Account Deletion',
+      messageComponent: (
+        <p><strong>CRITICAL ACTION:</strong> Delete the USER LOGIN ACCOUNT for <strong>{teacher.name}</strong> (User ID: {teacher.account_user_id})? This removes their ability to log in. The teacher profile will REMAIN. Are you absolutely sure?</p>
+      ),
+      onConfirmAction: executeDeleteAccount,
+      confirmButtonText: 'Delete Login Account',
+      confirmButtonClass: 'bg-red-600 hover:bg-red-700 text-white',
+      data: teacher,
+    });
+  };
+
+  const executeDeleteAccount = async (teacher) => {
+    if (!teacher || !teacher.id) return;
     setActionFeedback({ message: '', type: '', data: null });
     try {
-      const response = await axios.delete(`/teachers/${teacherId}/delete-account`); // Relative path
+      const response = await axios.delete(`/teachers/${teacher.id}/delete-account`);
       setActionFeedback({ message: response.data.message, type: 'success' });
       fetchTeachers();
     } catch (err) {
@@ -178,10 +272,10 @@ const TeacherList = () => {
   const handleItemsPerPageChange = (event) => { setItemsPerPage(Number(event.target.value)); setCurrentPage(1); };
   const handlePageChange = (newPage) => { if (newPage >= 1 && newPage <= totalPages) setCurrentPage(newPage); };
   const handleSubjectFilterClick = (subjectName) => { setSelectedSubjectFilter(prev => (prev === subjectName ? null : subjectName)); setCurrentPage(1); };
-  const handleRowClick = (teacher) => { setSelectedTeacherDetail(teacher); setIsDetailModalOpen(true); setActionFeedback({ message: '', type: '', data: null });};
+  const handleRowClick = (teacher) => { setSelectedTeacherDetail(teacher); setIsDetailModalOpen(true); };
   const closeDetailModal = () => { setIsDetailModalOpen(false); setSelectedTeacherDetail(null); };
-  const openAddTeacherModal = () => { setEditingTeacher(null); setIsFormModalOpen(true); setActionFeedback({ message: '', type: '', data: null }); };
-  const openEditTeacherModal = (teacher) => { setEditingTeacher(teacher); setIsFormModalOpen(true); if(isDetailModalOpen) setIsDetailModalOpen(false); setActionFeedback({ message: '', type: '', data: null });};
+  const openAddTeacherModal = () => { setEditingTeacher(null); setIsFormModalOpen(true); };
+  const openEditTeacherModal = (teacher) => { setEditingTeacher(teacher); setIsFormModalOpen(true); if(isDetailModalOpen) setIsDetailModalOpen(false); };
   const closeFormModal = () => { setIsFormModalOpen(false); setEditingTeacher(null); };
 
   const handleFormSaveSuccess = () => {
@@ -209,14 +303,14 @@ const TeacherList = () => {
   const lastEntryIndex = Math.min(currentPage * itemsPerPage, filteredTeachers.length);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto"> {/* max-w-7xl was from your original old design */}
-        {actionFeedback.message && (
+    <>
+      {actionFeedback.message && (
+        <div className="fixed top-5 right-5 z-50 w-full max-w-sm sm:max-w-md">
           <div
-            className={`p-4 mb-6 rounded-md shadow-lg transition-all duration-300 ${
-              actionFeedback.type === 'success' ? 'bg-green-100 border-l-4 border-green-500 text-green-700' :
-              actionFeedback.type === 'error' ? 'bg-red-100 border-l-4 border-red-500 text-red-700' :
-              'bg-blue-100 border-l-4 border-blue-500 text-blue-700'
+            className={`p-4 rounded-lg shadow-xl transition-all duration-300 ease-in-out transform ${
+              actionFeedback.type === 'success' ? 'bg-green-100 border-l-4 border-green-500 text-green-800' :
+              actionFeedback.type === 'error' ? 'bg-red-100 border-l-4 border-red-500 text-red-800' :
+              'bg-blue-100 border-l-4 border-blue-500 text-blue-800'
             }`}
             role="alert"
           >
@@ -224,7 +318,7 @@ const TeacherList = () => {
               <div className="py-1">
                 {actionFeedback.type === 'success' && <svg className="fill-current h-6 w-6 text-green-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM6.7 9.29L9 11.6l4.3-4.3 1.4 1.42L9 14.4l-3.7-3.7 1.4-1.42z"/></svg>}
                 {actionFeedback.type === 'error' && <svg className="fill-current h-6 w-6 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zM11.414 10l2.829-2.828-1.415-1.415L10 8.586 7.172 5.757 5.757 7.172 8.586 10l-2.829 2.828 1.415 1.415L10 11.414l2.828 2.829 1.415-1.415L11.414 10z"/></svg>}
-                {actionFeedback.type === 'info' && <svg className="fill-current h-6 w-6 text-blue-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zM9 11v4h2V9H9zm2-4a1 1 0 1 0-2 0 1 1 0 0 0 2 0z"/></svg>}
+                {actionFeedback.type !== 'success' && actionFeedback.type !== 'error' && <svg className="fill-current h-6 w-6 text-blue-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zM9 11v4h2V9H9zm2-4a1 1 0 1 0-2 0 1 1 0 0 0 2 0z"/></svg>}
               </div>
               <div>
                 <p className="font-bold">
@@ -235,7 +329,6 @@ const TeacherList = () => {
                   <p className="mt-2 text-xs">
                     <strong>Important:</strong> Temporary Password:
                     <span className="font-mono bg-gray-200 text-black px-1.5 py-0.5 rounded ml-1">{actionFeedback.data.temporaryPassword}</span>
-                    <br />Please communicate this securely. The user should change it upon first login.
                   </p>
                 )}
               </div>
@@ -249,215 +342,221 @@ const TeacherList = () => {
               </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {!loading && (totalTeachers > 0 || (!error && totalTeachers === 0)) && (
-          <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-xl shadow-lg">
-              <p className="text-4xl font-bold text-blue-600">{totalTeachers}</p>
-              <p className="mt-1 text-sm font-medium text-gray-500 uppercase tracking-wider">Total Teachers</p>
-              {Object.entries(shiftCounts).length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">By Shift</h3>
-                  <div className="space-y-1 max-h-28 overflow-y-auto">
-                    {Object.entries(shiftCounts).map(([shift, count]) => (
-                      <div key={shift} className="flex items-center justify-between text-sm">
-                        <p className="text-gray-700">{shift}</p>
-                        <p className="font-semibold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">{count}</p>
-                      </div>
+      <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {!loading && (totalTeachers > 0 || (!error && totalTeachers === 0)) && (
+            <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <p className="text-4xl font-bold text-blue-600">{totalTeachers}</p>
+                <p className="mt-1 text-sm font-medium text-gray-500 uppercase tracking-wider">Total Teachers</p>
+                {Object.entries(shiftCounts).length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">By Shift</h3>
+                    <div className="space-y-1 max-h-28 overflow-y-auto">
+                      {Object.entries(shiftCounts).map(([shift, count]) => (
+                        <div key={shift} className="flex items-center justify-between text-sm">
+                          <p className="text-gray-700">{shift}</p>
+                          <p className="font-semibold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">{count}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Filter by Subject</h3>
+                  {selectedSubjectFilter && (<button onClick={() => handleSubjectFilterClick(null)} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear Filter</button>)}
+                </div>
+                {Object.entries(subjectCounts).length > 0 ? (
+                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                    {Object.entries(subjectCounts).map(([subject, count]) => (
+                      <button
+                        key={subject}
+                        onClick={() => handleSubjectFilterClick(subject)}
+                        title={`Filter by ${subject} (${count} teachers)`}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 ${selectedSubjectFilter === subject ? 'bg-purple-600 text-white shadow-md ring-purple-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 ring-gray-300'}`}
+                      >
+                        {subject} <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${selectedSubjectFilter === subject ? 'bg-purple-400 text-purple-50' : 'bg-gray-300 text-gray-600'}`}>{count}</span>
+                      </button>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-lg">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Filter by Subject</h3>
-                {selectedSubjectFilter && (<button onClick={() => handleSubjectFilterClick(null)} className="text-xs text-red-500 hover:text-red-700 font-medium">Clear Filter</button>)}
+                ) : (<p className="text-gray-600 text-sm italic">No subject data available to filter.</p>)}
               </div>
-              {Object.entries(subjectCounts).length > 0 ? (
-                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-                  {Object.entries(subjectCounts).map(([subject, count]) => (
-                    <button
-                      key={subject}
-                      onClick={() => handleSubjectFilterClick(subject)}
-                      title={`Filter by ${subject} (${count} teachers)`}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 ${selectedSubjectFilter === subject ? 'bg-purple-600 text-white shadow-md ring-purple-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 ring-gray-300'}`}
-                    >
-                      {subject} <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${selectedSubjectFilter === subject ? 'bg-purple-400 text-purple-50' : 'bg-gray-300 text-gray-600'}`}>{count}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : (<p className="text-gray-600 text-sm italic">No subject data available to filter.</p>)}
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Teacher Management</h1>
-          <button onClick={openAddTeacherModal} className="bg-blue-600 text-white py-2.5 px-5 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center text-sm font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Add New Teacher Profile
-          </button>
-        </div>
-
-        {error && !actionFeedback.message && (
-          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow">
-            <p className="font-bold">Error Fetching Teacher Data</p>
-            <p>{error}</p>
-          </div>
-        )}
-
-        <div className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-          <div className="p-4 flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0 border-b border-gray-200">
-            <div className="flex items-center space-x-2">
-                <label htmlFor="itemsPerPage" className="text-sm text-gray-600">Show</label>
-                <select id="itemsPerPage" value={itemsPerPage} onChange={handleItemsPerPageChange} className="border border-gray-300 rounded-md p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500 shadow-sm">
-                    {[5, 10, 15, 20, 50, 100].map(num => <option key={num} value={num}>{num}</option>)}
-                </select>
-                <span className="text-sm text-gray-600">entries</span>
-            </div>
-            <div className="relative w-full sm:w-auto">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 text-gray-400"><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
-                </div>
-                <input type="text" placeholder="Search (name, email, phone)..." value={searchTerm} onChange={handleSearchChange} className="pl-10 pr-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 shadow-sm w-full sm:w-64" />
-            </div>
-          </div>
-
-          {/* Old Table Design Reinstated */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grades</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max Hours</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subjects</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {(loading && totalTeachers === 0 && !error ) && (
-                  <tr><td colSpan="7" className="px-6 py-10 text-center text-sm text-gray-500">Loading teachers data...</td></tr>
-                )}
-                {!loading && paginatedTeachers.length === 0 && (
-                   <tr>
-                    <td colSpan="7" className="px-6 py-10 text-center text-sm text-gray-500">
-                      {error
-                        ? `Error: ${error}`
-                        : (searchTerm || selectedSubjectFilter)
-                          ? 'No teachers match your search or filter criteria.'
-                          : 'No teachers found. Try adding some!'}
-                    </td>
-                  </tr>
-                )}
-                {!loading && paginatedTeachers.map((teacher) => (
-                  <tr
-                    key={teacher.id}
-                    className="hover:bg-gray-100 transition duration-150 cursor-pointer"
-                    onClick={() => handleRowClick(teacher)} // Row click opens detail modal
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <div className="flex items-center space-x-3">
-                        <img
-                          src={teacher.image_url || defaultImageUrl}
-                          alt={teacher.name ? `${teacher.name}'s profile` : 'Teacher'}
-                          className="w-10 h-10 rounded-full object-cover"
-                          onError={(e) => { e.target.onerror = null; e.target.src = defaultImageUrl; }}
-                        />
-                        <span>{teacher.name || 'N/A'}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{teacher.phone || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {teacher.grades?.map(g => g.name).join(', ') || <span className="text-gray-400 italic">N/A</span>}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{teacher.shift || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-center">{teacher.max_hours || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {teacher.subjects?.map(s => s.name).filter(Boolean).join(', ') || <span className="text-gray-400 italic">N/A</span>}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex flex-col space-y-1 items-start sm:items-center sm:flex-row sm:space-y-0 sm:space-x-2">
-                        {/* <button
-                          onClick={(e) => { e.stopPropagation(); openEditTeacherModal(teacher); }}
-                          className="text-indigo-600 hover:text-indigo-800 hover:underline transition duration-150 py-1 px-0.5 text-xs"
-                          title="Edit teacher profile"
-                        >
-                          Edit Profile
-                        </button> */}
-                        {!teacher.account_user_id ? (
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleCreateAccount(teacher.id, teacher.name); }}
-                                className={`text-green-600 hover:text-green-800 hover:underline transition duration-150 py-1 px-0.5 text-xs ${!teacher.email ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                title={!teacher.email ? "Teacher email required" : "Create login account"}
-                                disabled={!teacher.email}
-                            >
-                                Create Account
-                            </button>
-                        ) : (
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleDeleteAccount(teacher.id, teacher.account_user_id, teacher.name); }}
-                                className="text-red-600 hover:text-red-800 hover:underline transition duration-150 py-1 px-0.5 text-xs"
-                                title="Delete login account"
-                            >
-                                Delete Account
-                            </button>
-                        )}
-                        {/* Delete Profile button could also be placed here or inside TeacherDetailModal */}
-                        {/* For this old design, let's assume TeacherDetailModal handles the "Delete Profile" more directly */}
-                      </div>
-                       {!teacher.email && !teacher.account_user_id && (
-                            <p className="text-xs text-orange-500 italic mt-0.5">Email needed for login</p>
-                        )}
-                         {teacher.account_user_id && (
-                            <p className="text-xs text-green-600 italic mt-0.5">Login Active</p>
-                        )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {filteredTeachers.length > 0 && (
-             <div className="p-4 flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0 border-t border-gray-200">
-                <div className="text-sm text-gray-600">
-                    Showing {firstEntryIndex} to {lastEntryIndex} of {filteredTeachers.length} entries
-                    {searchTerm && <span className="ml-1 font-semibold text-gray-500">(searched)</span>}
-                    {selectedSubjectFilter && <span className="ml-1 font-semibold text-gray-500">(filtered by "{selectedSubjectFilter}")</span>}
-                </div>
-                <div className="flex items-center space-x-1">
-                  <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg></button>
-                  <span className="px-3 py-1 border border-blue-500 bg-blue-500 text-white rounded-md text-sm font-semibold shadow-sm">{currentPage}</span>
-                  <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages || totalPages === 0} className="px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg></button>
-                </div>
             </div>
           )}
+
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Teacher Management</h1>
+            <button onClick={openAddTeacherModal} className="bg-blue-600 text-white py-2.5 px-5 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center text-sm font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+              Add New Teacher Profile
+            </button>
+          </div>
+
+          {error && (
+            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow">
+              <p className="font-bold">Error Fetching Teacher Data</p>
+              <p>{error}</p>
+            </div>
+          )}
+
+          <div className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+            <div className="p-4 flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0 border-b border-gray-200">
+              <div className="flex items-center space-x-2">
+                  <label htmlFor="itemsPerPage" className="text-sm text-gray-600">Show</label>
+                  <select id="itemsPerPage" value={itemsPerPage} onChange={handleItemsPerPageChange} className="border border-gray-300 rounded-md p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500 shadow-sm">
+                      {[5, 10, 15, 20, 50, 100].map(num => <option key={num} value={num}>{num}</option>)}
+                  </select>
+                  <span className="text-sm text-gray-600">entries</span>
+              </div>
+              <div className="relative w-full sm:w-auto">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 text-gray-400"><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                  </div>
+                  <input type="text" placeholder="Search (name, email, phone)..." value={searchTerm} onChange={handleSearchChange} className="pl-10 pr-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 shadow-sm w-full sm:w-64" />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grades</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max Hours</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subjects</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {(loading && totalTeachers === 0 && !error ) && (
+                    <tr><td colSpan="7" className="px-6 py-10 text-center text-sm text-gray-500">Loading teachers data...</td></tr>
+                  )}
+                  {!loading && paginatedTeachers.length === 0 && (
+                     <tr>
+                      <td colSpan="7" className="px-6 py-10 text-center text-sm text-gray-500">
+                        {error && !actionFeedback.message
+                          ? `Error: ${error}`
+                          : (searchTerm || selectedSubjectFilter)
+                            ? 'No teachers match your search or filter criteria.'
+                            : 'No teachers found. Try adding some!'}
+                      </td>
+                    </tr>
+                  )}
+                  {!loading && paginatedTeachers.map((teacher) => (
+                    <tr
+                      key={teacher.id}
+                      className="hover:bg-gray-100 transition duration-150 cursor-pointer"
+                      onClick={() => handleRowClick(teacher)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <div className="flex items-center space-x-3">
+                          <img
+                            src={teacher.image_url || defaultImageUrl}
+                            alt={teacher.name ? `${teacher.name}'s profile` : 'Teacher'}
+                            className="w-10 h-10 rounded-full object-cover"
+                            onError={(e) => { e.target.onerror = null; e.target.src = defaultImageUrl; }}
+                          />
+                          <span>{teacher.name || 'N/A'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{teacher.phone || 'N/A'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {teacher.grades?.map(g => g.name).join(', ') || <span className="text-gray-400 italic">N/A</span>}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{teacher.shift || 'N/A'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-center">{teacher.max_hours || 'N/A'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {teacher.subjects?.map(s => s.name).filter(Boolean).join(', ') || <span className="text-gray-400 italic">N/A</span>}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex flex-col space-y-1 items-start sm:items-center sm:flex-row sm:space-y-0 sm:space-x-2">
+                          {!teacher.account_user_id ? (
+                              <button
+                                  onClick={(e) => { e.stopPropagation(); handleCreateAccountRequest(teacher); }}
+                                  className={`text-green-600 hover:text-green-800 hover:underline transition duration-150 py-1 px-0.5 text-xs ${!teacher.email ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  title={!teacher.email ? "Teacher email required" : "Create login account"}
+                                  disabled={!teacher.email}
+                              >
+                                  Create Account
+                              </button>
+                          ) : (
+                              <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteAccountRequest(teacher); }}
+                                  className="text-red-600 hover:text-red-800 hover:underline transition duration-150 py-1 px-0.5 text-xs"
+                                  title="Delete login account"
+                              >
+                                  Delete Account
+                              </button>
+                          )}
+                        </div>
+                         {!teacher.email && !teacher.account_user_id && (
+                              <p className="text-xs text-orange-500 italic mt-0.5">Email needed for login</p>
+                          )}
+                           {teacher.account_user_id && (
+                              <p className="text-xs text-green-600 italic mt-0.5">Login Active</p>
+                          )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {filteredTeachers.length > 0 && (
+               <div className="p-4 flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0 border-t border-gray-200">
+                  <div className="text-sm text-gray-600">
+                      Showing {firstEntryIndex} to {lastEntryIndex} of {filteredTeachers.length} entries
+                      {searchTerm && <span className="ml-1 font-semibold text-gray-500">(searched)</span>}
+                      {selectedSubjectFilter && <span className="ml-1 font-semibold text-gray-500">(filtered by "{selectedSubjectFilter}")</span>}
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg></button>
+                    <span className="px-3 py-1 border border-blue-500 bg-blue-500 text-white rounded-md text-sm font-semibold shadow-sm">{currentPage}</span>
+                    <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages || totalPages === 0} className="px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg></button>
+                  </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {isDetailModalOpen && selectedTeacherDetail && (
+          <TeacherDetailModal
+            teacher={selectedTeacherDetail}
+            onClose={closeDetailModal}
+            onDelete={(teacherData) => handleDeleteProfileRequest(teacherData)} // Pass the whole teacher object
+            onEdit={openEditTeacherModal}
+          />
+        )}
+
+        {isFormModalOpen && (
+          <TeacherFormModal
+            isOpen={isFormModalOpen}
+            onClose={closeFormModal}
+            teacherToEdit={editingTeacher}
+            onSaveSuccess={handleFormSaveSuccess}
+          />
+        )}
+
+        <ConfirmationModal
+            isOpen={confirmModalState.isOpen}
+            onClose={closeConfirmationModal}
+            onConfirm={handleModalConfirm}
+            title={confirmModalState.title}
+            confirmButtonText={confirmModalState.confirmButtonText}
+            confirmButtonClass={confirmModalState.confirmButtonClass}
+        >
+            {confirmModalState.messageComponent}
+        </ConfirmationModal>
+
       </div>
-
-      {isDetailModalOpen && selectedTeacherDetail && (
-        <TeacherDetailModal
-          teacher={selectedTeacherDetail}
-          onClose={closeDetailModal}
-          onDelete={(id, name) => handleDeleteProfile(id, name)} // TeacherDetailModal should probably handle profile deletion
-          onEdit={openEditTeacherModal}
-        />
-      )}
-
-      {isFormModalOpen && (
-        <TeacherFormModal
-          isOpen={isFormModalOpen}
-          onClose={closeFormModal}
-          teacherToEdit={editingTeacher}
-          onSaveSuccess={handleFormSaveSuccess}
-        />
-      )}
-    </div>
+    </>
   );
 };
 

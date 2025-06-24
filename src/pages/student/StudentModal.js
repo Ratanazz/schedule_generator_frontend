@@ -20,32 +20,37 @@ const StudentModal = ({
     const [isLoadingGradeClasses, setIsLoadingGradeClasses] = useState(false);
     const [errorGradeClasses, setErrorGradeClasses] = useState('');
 
-    const [currentUser, setCurrentUser] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null); // Not directly used in filtering logic but part of state
 
     useEffect(() => {
         if (isOpen) {
+            // console.log('[EFFECT] Modal opened. Initial studentData:', JSON.parse(JSON.stringify(studentData)));
             setErrorGrades('');
             setErrorGradeClasses('');
 
-            // Fetch logged-in user
+            // Fetch logged-in user (if not already fetched or if it can change)
+            // For simplicity, fetching user every time modal opens. Adjust if needed.
             axios.get('/user')
                 .then(res => {
-                    setCurrentUser(res.data);
+                    setCurrentUser(res.data); // Store user if needed elsewhere
                     setStudentData(prev => ({
                         ...prev,
-                        user_id: res.data.id,
+                        user_id: res.data.id, // Assuming studentData needs user_id
                     }));
                 })
                 .catch(err => {
                     console.error("Failed to fetch user:", err);
+                    // Optionally set an error state for user fetching
                 });
 
-            // Fetch Grades
+            // Fetch Grades if not already loaded
             if (internalGrades.length === 0) {
                 setIsLoadingGrades(true);
                 axios.get('/grades')
                     .then(response => {
-                        setInternalGrades(response.data.data || response.data || []);
+                        const fetchedGrades = response.data.data || response.data || [];
+                        // console.log('[EFFECT GRADES] Fetched Grades:', fetchedGrades);
+                        setInternalGrades(fetchedGrades);
                     })
                     .catch(err => {
                         console.error("Failed to load grades:", err);
@@ -56,41 +61,69 @@ const StudentModal = ({
                     });
             }
 
-            // Fetch Grade Classes
+            // Fetch Grade Classes if not already loaded
             if (internalAllGradeClasses.length === 0) {
                 setIsLoadingGradeClasses(true);
                 axios.get('/gradeclasses')
                     .then(response => {
-                        setInternalAllGradeClasses(response.data.data || response.data || []);
+                        const fetchedClasses = response.data.data || response.data || [];
+                        
+                        setInternalAllGradeClasses(fetchedClasses);
                     })
                     .catch(err => {
                         console.error("Failed to load grade classes:", err);
                         setErrorGradeClasses('Failed to load classes.');
+                        setInternalAllGradeClasses([]); 
                     })
                     .finally(() => {
                         setIsLoadingGradeClasses(false);
                     });
             }
         }
-    }, [isOpen]);
+    }, [isOpen, setStudentData]); 
 
     const availableClassesForSelectedGrade = useMemo(() => {
+        
         if (!studentData.grade_id || !internalAllGradeClasses || internalAllGradeClasses.length === 0) {
             return [];
         }
+
         const currentGradeId = parseInt(studentData.grade_id, 10);
-        return internalAllGradeClasses.filter(gc => gc.grade_id === currentGradeId);
+        if (isNaN(currentGradeId)) {
+            
+            return [];
+        }
+
+        const filteredClasses = internalAllGradeClasses.filter(gc => {
+            // Ensure gc and gc.grade and gc.grade.id exist
+            if (!gc || !gc.grade || typeof gc.grade.id === 'undefined') {
+                
+                return false;
+            }
+
+            const gcGradeId = parseInt(gc.grade.id, 10);
+            if (isNaN(gcGradeId)) {
+                
+                return false;
+            }
+            return gcGradeId === currentGradeId;
+        });
+
+       
+        return filteredClasses;
     }, [studentData.grade_id, internalAllGradeClasses]);
 
     if (!isOpen) return null;
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
+        
         setStudentData(prev => {
             const newState = { ...prev, [name]: value };
             if (name === 'grade_id') {
-                newState.gradeclass_id = '';
+                newState.gradeclass_id = ''; 
             }
+            
             return newState;
         });
     };
@@ -165,15 +198,15 @@ const StudentModal = ({
                                 className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${errors.grade_id ? 'border-red-500 ring-red-500' : 'border-gray-300'}`}
                                 disabled={isLoadingGrades}
                             >
-                                <option value="" disabled>
+                                <option value="" disabled={isLoadingGrades}>
                                     {isLoadingGrades ? 'Loading grades...' : 'Select Grade'}
                                 </option>
-                                {internalGrades && internalGrades.map(grade => (
+                                {internalGrades.map(grade => (
                                     <option key={grade.id} value={grade.id}>{grade.name}</option>
                                 ))}
                             </select>
                             {isLoadingGrades && <small className="text-xs text-blue-500 mt-1">Loading grades...</small>}
-                            {errorGrades && <small className="text-xs text-red-600 mt-1">{errorGrades}</small>}
+                            {errorGrades && !isLoadingGrades && <small className="text-xs text-red-600 mt-1">{errorGrades}</small>}
                             {errors.grade_id && <small className="text-red-600 mt-1">{errors.grade_id[0]}</small>}
                         </div>
                         <div>
@@ -184,10 +217,12 @@ const StudentModal = ({
                                 value={studentData.gradeclass_id || ''}
                                 onChange={handleInputChange}
                                 className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${errors.gradeclass_id ? 'border-red-500 ring-red-500' : 'border-gray-300'}`}
-                                disabled={!studentData.grade_id || availableClassesForSelectedGrade.length === 0 || isLoadingGradeClasses || isLoadingGrades}
+                                disabled={!studentData.grade_id || isLoadingGradeClasses || isLoadingGrades || (studentData.grade_id && availableClassesForSelectedGrade.length === 0 && !isLoadingGradeClasses && !isLoadingGrades)}
                             >
-                                <option value="" disabled>
-                                    {isLoadingGradeClasses ? 'Loading classes...' : 'Select Class'}
+                                <option value="" disabled={isLoadingGradeClasses || !studentData.grade_id}>
+                                    {isLoadingGradeClasses ? 'Loading classes...' :
+                                     !studentData.grade_id ? 'Select Grade First' :
+                                     (availableClassesForSelectedGrade.length === 0 && !isLoadingGrades ? 'No classes available' : 'Select Class')}
                                 </option>
                                 {availableClassesForSelectedGrade.map(gc => (
                                     <option key={gc.id} value={gc.id}>
@@ -197,12 +232,12 @@ const StudentModal = ({
                             </select>
                             {errors.gradeclass_id && <small className="text-red-600 mt-1">{errors.gradeclass_id[0]}</small>}
                             {isLoadingGradeClasses && <small className="text-xs text-blue-500 mt-1">Loading available classes...</small>}
-                            {errorGradeClasses && <small className="text-xs text-red-600 mt-1">{errorGradeClasses}</small>}
+                            {errorGradeClasses && !isLoadingGradeClasses && <small className="text-xs text-red-600 mt-1">{errorGradeClasses}</small>}
                             {!isLoadingGradeClasses && !isLoadingGrades && !errorGradeClasses && !studentData.grade_id && (
                                 <small className="text-xs text-gray-500 mt-1">Select a grade to view classes.</small>
                             )}
                             {!isLoadingGradeClasses && !isLoadingGrades && !errorGradeClasses && studentData.grade_id && availableClassesForSelectedGrade.length === 0 && (
-                                <small className="text-xs text-gray-500 mt-1">No classes available for this grade.</small>
+                                <small className="text-xs text-gray-500 mt-1">No classes for this grade.</small>
                             )}
                         </div>
                     </div>
